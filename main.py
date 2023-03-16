@@ -1,12 +1,6 @@
-''' we are having fun
-'''
-import os
 import tkinter as tk
 import socket
 import time
-
-ip_addr = "127.0.0.1"
-port = 8119
 
 root = tk.Tk()
 root.geometry("1600x900")
@@ -149,13 +143,16 @@ class Server():
     # server connection
     def server_listen_accept(self, ip_addr, port):
         tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_server.bind((ip_addr, port))
+        tcp_server.bind((ip_addr, int(port)))
         tcp_server.listen(1)
-
-        client, addr = tcp_server.accept()
-        client_username = client.recv(1024).decode()
-        client_system_info = client.recv(1024).decode()
-
+        while True:
+            try:
+                client, addr = tcp_server.accept()
+                client_username = client.recv(1024).decode()
+                print(client_username)
+            except:
+                pass
+        print("Listening")
     
 
     # Each time when we change page pressing any button on option(left) bar:
@@ -197,7 +194,17 @@ class Server():
     def connect_page(self):
         self.connect_frame = tk.Frame(self.main_frame)
 
-        # ο κώδικας της Ισμήνης
+        self.server_ip_addr_label = tk.Label(self.main_frame, text='ip address:')
+        self.server_ip_addr_entry = tk.Entry(self.main_frame)
+        self.server_port_label = tk.Label(self.main_frame, text='port: ')
+        self.server_port_entry = tk.Entry(self.main_frame)
+        self.listen_btn = tk.Button(self.main_frame, text='start listening',command=lambda: self.server_listen_accept(self.server_ip_addr_entry.get(), self.server_port_entry.get()))
+        
+        self.server_ip_addr_label.place(x=300, y=150)
+        self.server_ip_addr_entry.place(x=250, y=200)
+        self.server_port_label.place(x=300, y=250)
+        self.server_port_entry.place(x=250, y=300)
+        self.listen_btn.place(x=300, y=350)
 
         self.connect_frame.place(x=0, y=0)
         self.connect_frame.pack_propagate(False)
@@ -255,15 +262,30 @@ class Client:
                                       text='welcome to client!',
                                       font=('Arial', 30)
                                       )
+        self.client_ip_addr_label = tk.Label(self.client_frame, text='server IP address:')
+        self.client_ip_addr_entry = tk.Entry(self.client_frame)
+        self.client_port_label = tk.Label(self.client_frame, text='port:')
+        self.client_port_entry = tk.Entry(self.client_frame)
+        self.client_connect_btn = tk.Button(self.client_frame, text='connect', command=lambda: self.client_connect(self.client_ip_addr_entry.get(), self.client_port_entry.get()))
+
                                               
         self.label_welcome.pack()
+        self.client_ip_addr_label.place(x=500, y=300)
+        self.client_ip_addr_entry.place(x=500, y=350)
+        self.client_port_label.place(x=500, y=400)
+        self.client_port_entry.place(x=500, y=450)
+        self.client_connect_btn.place(x=500, y=500)
 
         self.client_frame.pack()
+        self.client_frame.pack_propagate(False)
+        self.client_frame.configure(width=1600, height=900)
     
 
-    def connect(self, ip_addr, port):
+    def client_connect(self, ip_addr, port):
+        tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_client.connect((ip_addr, int(port)))
+        tcp_client.send("hello".encode())
         
-
 
 
 run_login = Login(root)
