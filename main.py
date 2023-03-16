@@ -1,3 +1,5 @@
+''' we are having fun
+'''
 import tkinter as tk
 import socket
 import time
