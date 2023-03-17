@@ -1,12 +1,7 @@
-''' we are having fun
-'''
-import os
 import tkinter as tk
 import socket
 import time
 
-ip_addr = "127.0.0.1"
-port = 8119
 
 root = tk.Tk()
 root.geometry("1600x900")
