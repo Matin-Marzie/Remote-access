@@ -1,6 +1,6 @@
 import tkinter as tk
 import socket
-import time
+import threading
 
 root = tk.Tk()
 root.geometry("1600x900")
@@ -139,7 +139,7 @@ class Server():
         self.right_frame.pack_propagate(False)
         self.right_frame.configure(width=300, height=880, background='white')
 
-
+    #########################################################################################
     # server connection
     def server_listen_accept(self, ip_addr, port):
         tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -155,9 +155,11 @@ class Server():
         print("Listening")
     
 
+    #########################################################################################
     # Each time when we change page pressing any button on option(left) bar:
     # 1) we destroy old pages and 
     # 2) we highlit the pressed button by changing its color from #BEF8AE to #63e53f
+
     def destroy_old_frame(self):
         for frame in self.main_frame.winfo_children():
             frame.destroy()
@@ -177,7 +179,7 @@ class Server():
         self.destroy_old_frame()
         page()
 
-
+    #########################################################################################
     # option bar functions
 
     def server_client_page(self):
@@ -198,7 +200,7 @@ class Server():
         self.server_ip_addr_entry = tk.Entry(self.main_frame)
         self.server_port_label = tk.Label(self.main_frame, text='port: ')
         self.server_port_entry = tk.Entry(self.main_frame)
-        self.listen_btn = tk.Button(self.main_frame, text='start listening',command=lambda: self.server_listen_accept(self.server_ip_addr_entry.get(), self.server_port_entry.get()))
+        self.listen_btn = tk.Button(self.main_frame, text='start listening',command=self.listen_btn_click)
         
         self.server_ip_addr_label.place(x=300, y=150)
         self.server_ip_addr_entry.place(x=250, y=200)
@@ -209,6 +211,12 @@ class Server():
         self.connect_frame.place(x=0, y=0)
         self.connect_frame.pack_propagate(False)
         self.connect_frame.configure(width=960, height=880)
+
+
+    def listen_btn_click(self):
+        print("test1")
+        self.server_connection_thread = threading.Thread(target=self.server_listen_accept, args=(self.server_ip_addr_entry, self.server_port_entry))
+        self.server_connection_thread.start()
 
 
     def file_transfer_page(self):
@@ -255,7 +263,7 @@ class Client:
         for frame in window.winfo_children():
             frame.destroy()
 
-
+        
         self.client_frame = tk.Frame(window)
 
         self.label_welcome = tk.Label(self.client_frame,
