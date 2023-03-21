@@ -2,6 +2,9 @@
 import tkinter as tk
 import socket
 import threading
+from getpass import getuser
+from platform import uname
+from time import sleep
 
 root = tk.Tk()
 root.geometry("1600x900")
@@ -175,25 +178,43 @@ class Server():
         destroy_old_frames(self.main_frame)
         page()
 
+
+    # printing listening...
+    def print_listening(self):
+        while True:
+            self.listening_label.config(text='listening.')
+            sleep(1)
+            self.listening_label.config(text='listening..')
+            sleep(1)
+            self.listening_label.config(text='listening...  ')
+            sleep(1)
+
+
     #########################################################################################
     # server connection
     def server_listen_accept(self, ip_addr, port):
-        tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_server.bind((ip_addr, int(port)))
-        tcp_server.listen(1)
+        self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_server.bind((ip_addr, int(port)))
+        self.tcp_server.listen(1)
+        threading.Thread(target=self.print_listening, args=()).start()
         while True:
             try:
-                client, addr = tcp_server.accept()
-                client_username = client.recv(1024).decode()
-                print(client_username)
+                client, addr = self.tcp_server.accept()
+                self.client_username = client.recv(1024).decode()
+                self.client_os = client.recv(1024).decode()
+                print(self.client_username)
+                print("\n")
+                print(self.client_os)
             except:
-                pass
-        print("Listening...")
+                self.tcp_server.close()
+                print("failed 1")
 
     def listen_btn_click(self):
-        print("test1")
-        self.server_connection_thread = threading.Thread(target=self.server_listen_accept, args=(self.server_ip_addr_entry, self.server_port_entry))
-        self.server_connection_thread.start()
+        server_ip = self.server_ip_addr_entry.get()
+        server_port = self.server_port_entry.get()
+        threading.Thread(target=self.server_listen_accept, args=(server_ip, server_port)).start()
+
+        
     #########################################################################################
 
 
@@ -212,17 +233,20 @@ class Server():
         self.connect_frame.configure(width=960, height=880)
 
 
+        self.listening_label = tk.Label(self.main_frame,)
         self.server_ip_addr_label = tk.Label(self.main_frame, text='ip address:')
         self.server_ip_addr_entry = tk.Entry(self.main_frame)
         self.server_port_label = tk.Label(self.main_frame, text='port: ')
         self.server_port_entry = tk.Entry(self.main_frame)
         self.listen_btn = tk.Button(self.main_frame, text='start listening',command=self.listen_btn_click)
-        
-        self.server_ip_addr_label.place(x=300, y=150)
-        self.server_ip_addr_entry.place(x=250, y=200)
-        self.server_port_label.place(x=300, y=250)
-        self.server_port_entry.place(x=250, y=300)
-        self.listen_btn.place(x=300, y=350)
+        self.server_reset_btn = tk.Button(self.main_frame, text='reset')
+
+        self.listening_label.pack()
+        self.server_ip_addr_label.pack()
+        self.server_ip_addr_entry.pack()
+        self.server_port_label.pack()
+        self.server_port_entry.pack()
+        self.listen_btn.pack()
 
     
     def command_page(self):
@@ -334,7 +358,10 @@ class Client:
                                   pady=10,
                                   command=lambda: self.indicate(self.cln_help_btn, self.cln_help_page)
                                   )
-
+        
+        self.client_windows_username = getuser()
+        self.client_os_info = uname()
+        
 
         self.cln_choose_user_btn.place(x=20, y=50)
         self.cln_connect_btn.place(x=20, y=130)
@@ -363,6 +390,17 @@ class Client:
         self.cln_connect_frame = tk.Frame(self.cln_main_frame)
         self.cln_connect_frame.pack()
 
+        self.client_ip_addr_label = tk.Label(self.cln_main_frame, text='server IP address:')
+        self.client_ip_addr_entry = tk.Entry(self.cln_main_frame)
+        self.client_port_label = tk.Label(self.cln_main_frame, text='port:')
+        self.client_port_entry = tk.Entry(self.cln_main_frame)
+        self.client_connect_server = tk.Button(self.cln_main_frame, text='connect', command=self.client_connect_click)
+
+        self.client_ip_addr_label.pack()
+        self.client_ip_addr_entry.pack()
+        self.client_port_label.pack()
+        self.client_port_entry.pack()
+        self.client_connect_server.pack()
 
     def cln_help_page(self):
         self.cln_help_frame = tk.Frame(self.cln_main_frame)
@@ -370,13 +408,23 @@ class Client:
 
 
     #######################################################################
-    # socket connection
+    # client connection
     def client_connect(self, ip_addr, port):
         tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_client.connect((ip_addr, int(port)))
-        tcp_client.send("hello".encode())
+        try:
+            tcp_client.connect((ip_addr, int(port)))
+            tcp_client.send(self.client_windows_username.encode())
+            tcp_client.send(str(self.client_os_info).encode())
+        except:
+            print("client couldn't connecct!")
         
+    
+    def client_connect_click(self):
+        client_ip = self.client_ip_addr_entry.get()
+        client_port = self.client_port_entry.get()
+        self.client_connection_thread = threading.Thread(target=self.client_connect, args=(client_ip, client_port)).start()
 
+    #######################################################################
 
 # Runnig program 
 run_login = Login(root)
