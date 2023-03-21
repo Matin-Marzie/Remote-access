@@ -36,18 +36,18 @@ class Login:
         self.login_frame.pack()
         
         # Content
+        myclr="#85d5fb"
+        self.login_frame = tk.Frame(window)
+
         self.choose_label = tk.Label(self.login_frame,
-                                text='Choose User:',
-                                font=('Arial', 30)
-                                )
+                                text="CHOOSE WHAT YOU WANT TO DO",font=("Verdana"),width=90,height=32,bg=myclr2
+                                     )
         self.server_btn = tk.Button(self.login_frame,
-                               text='server',
-                               font=('Arial', 30),
+                               text="SERVER",font="Verdana",bg=myclr,fg="black",width=90,height=2,
                                command=self.choosen_server
                                )
         self.client_btn = tk.Button(self.login_frame,
-                               text='client',
-                               font=('Arial', 30),
+                               text="CLIENT",font="Verdana",bg=myclr,fg="black",width=90,height=2,
                                command=self.choosen_client
                                )
 
