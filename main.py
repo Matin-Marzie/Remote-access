@@ -98,51 +98,51 @@ class Server():
 
         # Left bar (option bar)
         self.choose_user_btn = tk.Button(self.options_frame,
-                                       text='choose user',
-                                       font=('Arial', 25, 'bold'),
-                                       bg='#00BFFF',
-                                       padx=38,
-                                       pady=10,
+                                       text='BACK',
+                                       font=('Verdana', 25),
+                                       bg='#85d5fb',
+                                       padx=20,width=10,height=1,
+                                       pady=1,anchor="n",
                                        command=lambda: self.indicate(self.choose_user_btn, self.choose_user_page)
                                        )
         self.connect_btn = tk.Button(self.options_frame,
-                                     text='connection',
-                                     font=('Arial', 25, 'bold'),
-                                     bg='#00BFFF',
-                                     padx=48,
-                                     pady=10,
+                                     text='CONNECTION',
+                                     font=('Verdana', 25),
+                                     bg='#85d5fb',
+                                     padx=20,width=10,height=1,
+                                     pady=1,anchor="n",
                                      command=lambda: self.indicate(self.connect_btn, self.connect_page)
                                      )
         self.command_btn = tk.Button(self.options_frame,
-                                     text='command line',
-                                     font=('Arial', 25, 'bold'),
-                                     bg='#00BFFF',
-                                     padx=25,
-                                     pady=10,
+                                     text='CMD',
+                                     font=('Verdana', 25),
+                                     bg='#85d5fb',
+                                     padx=20,width=10,height=1,
+                                     pady=1,anchor="n",
                                      command=lambda: self.indicate(self.command_btn, self.command_page)
                                      )
         self.file_transfer = tk.Button(self.options_frame,
-                                       text='file transfer',
-                                       font=('Arial', 25, 'bold'),
-                                       bg='#00BFFF',
-                                       padx=45,
-                                       pady=10,
+                                       text='TRANSFER',
+                                       font=('Verdana', 25),
+                                       bg='#85d5fb',
+                                       padx=20,width=10,height=1,
+                                       pady=1,anchor="n",
                                        command=lambda: self.indicate(self.file_transfer, self.file_transfer_page)
                                        )
         self.setting_btn = tk.Button(self.options_frame,
-                                     text='settings',
-                                     font=('Arial', 25, 'bold'),
-                                     bg='#00BFFF',
-                                     padx=72,
-                                     pady=10,
+                                     text='SETTINGS',
+                                     font=('Verdana', 25),
+                                     bg='#85d5fb',
+                                     padx=20,width=10,height=1,
+                                     pady=1,anchor="n",
                                      command=lambda: self.indicate(self.setting_btn, self.setting_page)
                                      )
         self.help_btn = tk.Button(self.options_frame,
-                                  text='help',
-                                  font=('Arial', 25, 'bold'),
-                                  bg='#00BFFF',
-                                  padx=103,
-                                  pady=10,
+                                  text='HELP',
+                                  font=('Verdana', 25),
+                                  bg='#85d5fb',
+                                  padx=20,width=10,height=1,
+                                  pady=1,anchor="n",
                                   command=lambda: self.indicate(self.help_btn, self.help_page)
                                   )
 
@@ -164,12 +164,12 @@ class Server():
     # 3) display the pressed button page
 
     def hide_indicator(self):
-        self.choose_user_btn.config(bg='#00BFFF')
-        self.connect_btn.config(bg='#00BFFF')
-        self.command_btn.config(bg='#00BFFF')
-        self.file_transfer.config(bg='#00BFFF')
-        self.setting_btn.config(bg='#00BFFF')
-        self.help_btn.config(bg='#00BFFF')
+        self.choose_user_btn.config(bg='#85d5fb')
+        self.connect_btn.config(bg='#85d5fb')
+        self.command_btn.config(bg='#85d5fb')
+        self.file_transfer.config(bg='#85d5fb')
+        self.setting_btn.config(bg='#85d5fb')
+        self.help_btn.config(bg='#85d5fb')
 
 
     def indicate(self, label, page):
@@ -234,11 +234,11 @@ class Server():
 
 
         self.listening_label = tk.Label(self.main_frame,)
-        self.server_ip_addr_label = tk.Label(self.main_frame, text='ip address:')
-        self.server_ip_addr_entry = tk.Entry(self.main_frame)
-        self.server_port_label = tk.Label(self.main_frame, text='port: ')
-        self.server_port_entry = tk.Entry(self.main_frame)
-        self.listen_btn = tk.Button(self.main_frame, text='start listening',command=self.listen_btn_click)
+        self.server_ip_addr_label = tk.Label(self.main_frame, text='IP',font="Verdana",width=0,height=0,anchor="ne")
+        self.server_ip_addr_entry = tk.Entry(self.main_frame,width=50)
+        self.server_port_label = tk.Label(self.main_frame, text='PORT',font="Verdana",width=0,height=0,anchor="ne")
+        self.server_port_entry = tk.Entry(self.main_frame,width=50)
+        self.listen_btn = tk.Button(self.main_frame,bg="#85d5fb", text='START',font="Verdana",width=0,height=0,anchor="center",command=self.listen_btn_click)
         self.server_reset_btn = tk.Button(self.main_frame, text='reset')
 
         self.listening_label.pack()
@@ -335,27 +335,27 @@ class Client:
 
         # options bar (left bar)
         self.cln_choose_user_btn = tk.Button(window,
-                                       text='choose user',
-                                       font=('Arial', 25, 'bold'),
-                                       bg='#00BFFF',
-                                       padx=38,
-                                       pady=10,
+                                       text='BACK',
+                                       font=('Verdana', 25),
+                                       bg='#85d5fb',
+                                       padx=20,width=10,height=1,
+                                       pady=1,anchor="n",
                                        command=lambda: self.indicate(self.cln_choose_user_btn, self.cln_choose_user_page)
                                        )
         self.cln_connect_btn = tk.Button(window,
-                                     text='connection',
-                                     font=('Arial', 25, 'bold'),
-                                     bg='#00BFFF',
-                                     padx=48,
-                                     pady=10,
+                                     text='CONNECT',
+                                     font=('Verdana', 25),
+                                     bg='#85d5fb',
+                                     padx=20,width=10,height=1,
+                                     pady=1,anchor="n",
                                      command=lambda: self.indicate(self.cln_connect_btn, self.cln_connect_page)
                                      )
         self.cln_help_btn = tk.Button(window,
-                                  text='help',
-                                  font=('Arial', 25, 'bold'),
-                                  bg='#00BFFF',
-                                  padx=103,
-                                  pady=10,
+                                  text='HELP',
+                                  font=('Verdana', 25),
+                                  bg='#85d5fb',
+                                  padx=20,width=10,height=1,
+                                  pady=1,anchor="n",
                                   command=lambda: self.indicate(self.cln_help_btn, self.cln_help_page)
                                   )
         
@@ -369,9 +369,9 @@ class Client:
 
 
     def hide_indicator(self):
-        self.cln_choose_user_btn.config(bg='#00BFFF')
-        self.cln_connect_btn.config(bg='#00BFFF')
-        self.cln_help_btn.config(bg='#00BFFF')
+        self.cln_choose_user_btn.config(bg='#85d5fb')
+        self.cln_connect_btn.config(bg='#85d5fb')
+        self.cln_help_btn.config(bg='#85d5fb')
 
 
     def indicate(self, label, page):
@@ -390,11 +390,11 @@ class Client:
         self.cln_connect_frame = tk.Frame(self.cln_main_frame)
         self.cln_connect_frame.pack()
 
-        self.client_ip_addr_label = tk.Label(self.cln_main_frame, text='server IP address:')
-        self.client_ip_addr_entry = tk.Entry(self.cln_main_frame)
-        self.client_port_label = tk.Label(self.cln_main_frame, text='port:')
-        self.client_port_entry = tk.Entry(self.cln_main_frame)
-        self.client_connect_server = tk.Button(self.cln_main_frame, text='connect', command=self.client_connect_click)
+        self.client_ip_addr_label = tk.Label(self.cln_main_frame, text='SERVER-IP',font="Verdana",width=0,height=0,anchor="ne")
+        self.client_ip_addr_entry = tk.Entry(self.cln_main_frame,width=50)
+        self.client_port_label = tk.Label(self.cln_main_frame, text='PORT',font="Verdana",width=0,height=0,anchor="ne")
+        self.client_port_entry = tk.Entry(self.cln_main_frame,width=50)
+        self.client_connect_server = tk.Button(self.cln_main_frame,bg="#85d5fb", text='START',font="Verdana",width=0,height=0,anchor="center", command=self.client_connect_click)
 
         self.client_ip_addr_label.pack()
         self.client_ip_addr_entry.pack()
