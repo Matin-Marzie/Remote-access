@@ -38,11 +38,12 @@ class Server():
                 print(client_system_info)
                 self.server_listen_accept_bool = False
                 self.recv_out_put_thread.start()
+                run_login.run_server.command_page()
             except:
                 self.server_socket.close()
                 print("failed , server_listen_accept, while True, except ERROR")
                 
-        Server_frame(root).command_page()
+        
 
     def send_command(self, cmnd):
         if self.connected == True:
@@ -54,7 +55,7 @@ class Server():
     def recv_out_put(self):
         while self.connected and self.recv_out_put_bool:
             self.output = self.client.recv(1024).decode()
-            run_login.run_server.output_label.config(text=self.output)
+            run_login.run_server.print_output_label.config(text=self.output)
 
 
     def voice_socket():
@@ -308,31 +309,31 @@ class Server_frame():
         self.connect_frame.configure(width=960, height=880)
 
 
-        self.listening_label = tk.Label(self.main_frame,)
-        self.server_ip_addr_label = tk.Label(self.main_frame,
+        self.listening_label = tk.Label(self.connect_frame,)
+        self.server_ip_addr_label = tk.Label(self.connect_frame,
                                              text='IP Addr',
                                              font="Verdana",
                                              width=0,height=0,
                                              anchor="ne"
                                              )
-        self.server_ip_addr_entry = tk.Entry(self.main_frame,
+        self.server_ip_addr_entry = tk.Entry(self.connect_frame,
                                              width=50
                                              )
         self.server_ip_addr_entry.insert(0, "127.0.0.1")
-        self.server_port_label = tk.Label(self.main_frame,
+        self.server_port_label = tk.Label(self.connect_frame,
                                           text='PORT',
                                           font="Verdana",
                                           width=0,height=0,
                                           anchor="ne"
                                           )
-        self.server_port_entry = tk.Entry(self.main_frame,
+        self.server_port_entry = tk.Entry(self.connect_frame,
                                           width=50)
         self.server_port_entry.insert(0, 8119)
-        self.listen_btn = tk.Button(self.main_frame,
+        self.listen_btn = tk.Button(self.connect_frame,
                                     bg="#85d5fb",
                                     text='START',
                                     font="Verdana",width=0,height=0,anchor="w",command=lambda: self.listen_btn_click())
-        self.print_listening = tk.Label(self.main_frame,
+        self.print_listening = tk.Label(self.connect_frame,
                                         font="Verdana",
                                         text="Listening"
                                         )
@@ -346,34 +347,44 @@ class Server_frame():
     
     def command_page(self):
         self.indicate(self.command_btn)
-        self.command_frame = tk.Frame(self.main_frame)
-        self.command_frame.pack()
+        self.out_put_frame = tk.Frame(self.main_frame)
 
-        self.command_entry = tk.Entry(self.main_frame,
-                                      font=('Arial', 25),
-                                      fg='green',
-                                      bg='black',
-                                      width=45,
-                                      )
+        self.out_put_frame.place(x=50, y=50)
+        self.out_put_frame.pack_propagate(False)
+        self.out_put_frame.configure(width=860, height=680, background='black')
+
+        self.scrollbar = tk.Scrollbar(self.out_put_frame)
+
         self.output_label = tk.Label(self.main_frame,
-                                     text="output:\t\t\t\n\n@root:~$ cd Desktop/remote-access/\n@root:~/Desktop/remote-access$ ssh root@82.180.173.157\nroot@82.180.173.157's\npassword: \nroot@encryption:~# nc -lvp 443\n\n\n\n\n\n\n\n\n\n\n",
+                                     text="Out put:",
+                                     font=('Arial', 15)
+                                     )
+        self.print_output_label = tk.Label(self.out_put_frame,
+                                     text="Thid is command Line\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na",
                                      font=('Arial', 20),
                                      fg='green',
-                                     bg='black',
-                                     width=57,
-                                     height=22
+                                     bg='black'
                                      )
-        
+        self.command_entry = tk.Entry(self.main_frame,
+                                      font=('Arial', 20),
+                                      fg='green',
+                                      bg='black',
+                                      width=57,
+                                      )
     
         self.send = tk.Button(self.main_frame,
                               text="Send",
                               command= lambda: run_login.server.send_command(self.command_entry.get())
                               )
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
+        self.output_label.place(x=0, y=0)
+        self.print_output_label.pack()
         self.command_entry.place(x=50, y=760)
-        self.output_label.place(x=50, y=10)
         self.send.place(x=450, y=825)
 
+        self.out_put_frame.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.config(command=self.print_output_label.yview)
 
     def file_transfer_page(self):
         self.indicate(self.file_transfer_btn)
