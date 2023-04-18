@@ -5,26 +5,74 @@ from getpass import getuser
 from platform import uname
 from time import sleep
 
-root = tk.Tk()
-root.geometry("1600x900")
-root.configure(background='#000000')
-root.title("Matin")
-
-'''
-In this program we have three objects:
-    1)Login             The user will choose client or server, Login will navigate the user to server or client
-    2)Server            
-    3)Client
-'''
-
-def destroy_old_frames(frame):
-        for frame in frame.winfo_children():
-            frame.destroy()
+btn_color="#85d5fb"
 
 
 
-class Login:
+# ----------server-socket----------
+class Server():
+    def __init__(self):
+        self.listening_thread_exit_flag = False
 
+    def server_listen_accept(self, ip_addr, port):
+        self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_server.bind((ip_addr, int(port)))
+        self.tcp_server.listen(1)
+
+        while True:
+            try:
+                client, addr = self.tcp_server.accept()
+                print(f"connected {addr[0]}, {addr[1]}")
+                client_system_info = client.recv(1024).decode()
+                print(client_system_info)   
+                if self.listening_thread_exit_flag == True:
+                    break
+                
+            except:
+                self.tcp_server.close()
+                print("failed , server_listen_accept, while True, except ERROR")
+
+    def disconnect(self):
+        try:
+            self.tcp_server.close()
+        except:
+            pass
+
+
+
+
+
+
+
+
+# ----------client-socket----------
+class Client():
+    def __init__(self):
+        pass
+
+    def client_connect(self, ip_addr, port):
+        tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            tcp_client.connect((ip_addr, int(port)))
+            tcp_client.send(self.client_windows_username.encode())
+            tcp_client.send(str(self.client_os_info).encode())
+        except:
+            print("client couldn't connecct!")
+        
+    
+    def client_connect_click(self):
+        client_ip = self.client_ip_addr_entry.get()
+        client_port = self.client_port_entry.get()
+        self.client_connection_thread = threading.Thread(target=self.client_connect, args=(client_ip, client_port)).start()
+
+
+
+
+
+
+# ----------login-window----------
+class Login_frame():
+    
     def __init__(self, window):
 
         destroy_old_frames(window)
@@ -35,17 +83,16 @@ class Login:
         self.login_frame.pack()
         
         # Content
-        my_color="#85d5fb"
 
         self.choose_label = tk.Label(self.login_frame,
                                 text="CHOOSE USER",font=("Verdana"),width=90,height=32,bg="white"
                                      )
         self.server_btn = tk.Button(self.login_frame,
-                               text="SERVER",font="Verdana",bg=my_color,fg="black",width=90,height=2,
+                               text="SERVER",font="Verdana",bg=btn_color,fg="black",width=90,height=2,
                                command=self.choosen_server
                                )
         self.client_btn = tk.Button(self.login_frame,
-                               text="CLIENT",font="Verdana",bg=my_color,fg="black",width=90,height=2,
+                               text="CLIENT",font="Verdana",bg=btn_color,fg="black",width=90,height=2,
                                command=self.choosen_client
                                )
 
@@ -56,21 +103,25 @@ class Login:
 
     # if user chooses server
     def choosen_server(self):
-        run_server = Server(root)
+        run_server = Server_frame(root)
         run_server.connect_page()                       # we display connect_page() for default
         run_server.connect_btn.config(bg='#0080FF')     # also highlit it's button #00BFFF #0080FF
+        return True
+
 
     # if user chooses client
     def choosen_client(self):
-        run_client = Client(root)
+        run_client = Client_frame(root)
         run_client.cln_connect_page()
         run_client.cln_connect_btn.config(bg='#0080FF') 
+        return True
 
 
 
 
-class Server():
 
+# ----------server-window----------
+class Server_frame():
     def __init__(self, window):
 
         destroy_old_frames(window)
@@ -85,7 +136,7 @@ class Server():
         self.options_frame.pack_propagate(False)            # False: we can resize the frame and it will not cover all the window automaticlly
         self.options_frame.configure(width=300, height=880, background='white')
 
-        self.main_frame.place(x=320, y=10)
+        self.main_frame.place(x=320, y=10)  
         self.main_frame.pack_propagate(False)
         self.main_frame.configure(width=960, height=880)
 
@@ -177,50 +228,30 @@ class Server():
         page()
 
 
-    # printing listening...
-    def print_listening(self):
-        while True:
-            self.listening_label.config(text='listening.')
-            sleep(1)
-            self.listening_label.config(text='listening..')
-            sleep(1)
-            self.listening_label.config(text='listening...  ')
-            sleep(1)
-
-
-    #########################################################################################
-    # server connection
-    def server_listen_accept(self, ip_addr, port):
-        self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_server.bind((ip_addr, int(port)))
-        self.tcp_server.listen(1)
-        threading.Thread(target=self.print_listening, args=()).start()
-        while True:
-            try:
-                client, addr = self.tcp_server.accept()
-                self.client_username = client.recv(1024).decode()
-                self.client_os = client.recv(1024).decode()
-                print(self.client_username)
-                print("\n")
-                print(self.client_os)
-            except:
-                self.tcp_server.close()
-                print("failed 1")
-
     def listen_btn_click(self):
         server_ip = self.server_ip_addr_entry.get()
         server_port = self.server_port_entry.get()
-        threading.Thread(target=self.server_listen_accept, args=(server_ip, server_port)).start()
 
+        self.listen_btn.config(state='disabled')
+
+        self.listening_thread = threading.Thread(target=server.server_listen_accept, args=(server_ip, server_port))
+        self.listening_thread.start()
+
+
+    def stop_btn_click(self):
+        server.disconnect()
+        self.server_ip_addr_entry.delete(0, len(self.server_ip_addr_entry.get()))
+        self.server_port_entry.delete(0, len(self.server_port_entry.get()))
+        self.listen_btn.config(state='active')
         
-    #########################################################################################
+        server.listening_thread_exit_flag = True
 
 
     # Pages
 
     def choose_user_page(self):
-        Login(root)
-        
+        Login_frame(root)
+
 
 
     def connect_page(self):
@@ -236,8 +267,8 @@ class Server():
         self.server_ip_addr_entry = tk.Entry(self.main_frame,width=50)
         self.server_port_label = tk.Label(self.main_frame, text='PORT',font="Verdana",width=0,height=0,anchor="ne")
         self.server_port_entry = tk.Entry(self.main_frame,width=50)
-        self.listen_btn = tk.Button(self.main_frame,bg="#85d5fb", text='START',font="Verdana",width=0,height=0,anchor="center",command=self.listen_btn_click)
-        self.server_reset_btn = tk.Button(self.main_frame, text='reset')
+        self.listen_btn = tk.Button(self.main_frame,bg="#85d5fb", text='START',font="Verdana",width=0,height=0,anchor="w",command=self.listen_btn_click)
+        self.reset_btn = tk.Button(self.main_frame, bg="#85d5fb", text='STOP / RESET', font="Verdana", anchor="e", command=self.stop_btn_click)
 
         self.listening_label.pack()
         self.server_ip_addr_label.pack()
@@ -245,6 +276,7 @@ class Server():
         self.server_port_label.pack()
         self.server_port_entry.pack()
         self.listen_btn.pack()
+        self.reset_btn.pack()
 
     
     def command_page(self):
@@ -304,11 +336,8 @@ class Server():
 
 
 
-
-
-
-class Client:
-
+# ----------client-window----------
+class Client_frame():
     def __init__(self, window):
 
         destroy_old_frames(window)
@@ -357,8 +386,6 @@ class Client:
                                   command=lambda: self.indicate(self.cln_help_btn, self.cln_help_page)
                                   )
         
-        self.client_windows_username = getuser()
-        self.client_os_info = uname()
         
 
         self.cln_choose_user_btn.place(x=20, y=50)
@@ -382,7 +409,7 @@ class Client:
 
     # Pages
     def cln_choose_user_page(self):
-        Login(root)
+        Login_frame(root)
 
     def cln_connect_page(self):
         self.cln_connect_frame = tk.Frame(self.cln_main_frame)
@@ -392,7 +419,7 @@ class Client:
         self.client_ip_addr_entry = tk.Entry(self.cln_main_frame,width=50)
         self.client_port_label = tk.Label(self.cln_main_frame, text='PORT',font="Verdana",width=0,height=0,anchor="ne")
         self.client_port_entry = tk.Entry(self.cln_main_frame,width=50)
-        self.client_connect_server = tk.Button(self.cln_main_frame,bg="#85d5fb", text='START',font="Verdana",width=0,height=0,anchor="center", command=self.client_connect_click)
+        self.client_connect_server = tk.Button(self.cln_main_frame,bg="#85d5fb", text='START',font="Verdana",width=0,height=0,anchor="center", command=lambda: self.client_connect_click)
 
         self.client_ip_addr_label.pack()
         self.client_ip_addr_entry.pack()
@@ -405,28 +432,30 @@ class Client:
         self.cln_help_frame.pack()
 
 
-    #######################################################################
-    # client connection
-    def client_connect(self, ip_addr, port):
-        tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            tcp_client.connect((ip_addr, int(port)))
-            tcp_client.send(self.client_windows_username.encode())
-            tcp_client.send(str(self.client_os_info).encode())
-        except:
-            print("client couldn't connecct!")
-        
-    
-    def client_connect_click(self):
-        client_ip = self.client_ip_addr_entry.get()
-        client_port = self.client_port_entry.get()
-        self.client_connection_thread = threading.Thread(target=self.client_connect, args=(client_ip, client_port)).start()
 
-    #######################################################################
+
+
+
+def destroy_old_frames(frame):
+        for frame in frame.winfo_children():
+            frame.destroy()
+        
+
+
+
+root = tk.Tk()
+root.geometry("1600x900")
+root.configure(background='#000000')
+root.title("Matin")
 
 # Runnig program 
-run_login = Login(root)
+run_login = Login_frame(root)
+
+if lambda: run_login.choosen_server() == True:
+    server = Server()
+
+if lambda: run_login.choosen_client() == True:
+    client = Client()
 
 
 root.mainloop()
-
