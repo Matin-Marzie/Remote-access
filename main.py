@@ -30,19 +30,24 @@ class Server():
         self.server_socket.listen()
 
         run_login.run_server.print_listening.pack()
+
         while self.connected and self.server_listen_acccept_bool:
             try:
                 self.client, self.addr = self.server_socket.accept()
                 print(f"connected {self.addr[0]}, {self.addr[1]}")
+
                 client_system_info = self.client.recv(1024).decode()
                 print(client_system_info)
+
                 self.server_listen_accept_bool = False
                 self.recv_out_put_thread.start()
                 run_login.run_server.command_page()
             except:
                 self.server_socket.close()
                 print("failed , server_listen_accept, while True, except ERROR")
-                
+                sleep(3)
+
+        
         
 
     def send_command(self, cmnd):
@@ -351,20 +356,26 @@ class Server_frame():
 
         self.out_put_frame.place(x=50, y=50)
         self.out_put_frame.pack_propagate(False)
-        self.out_put_frame.configure(width=860, height=680, background='black')
+        self.out_put_frame.configure(width=860, height=670, background='black')
 
-        self.scrollbar = tk.Scrollbar(self.out_put_frame)
+        # self.scrollbar = tk.Scrollbar(self.out_put_frame)
 
         self.output_label = tk.Label(self.main_frame,
-                                     text="Out put:",
+                                     text="Output:",
                                      font=('Arial', 15)
                                      )
         self.print_output_label = tk.Label(self.out_put_frame,
-                                     text="Thid is command Line\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na",
+                                     text="Thid is command Line",
                                      font=('Arial', 20),
                                      fg='green',
-                                     bg='black'
+                                     bg='black',
+                                     anchor='nw',
+                                     justify='left'
                                      )
+        self.print_new_command_label = tk.Label(self.main_frame,
+                                                text='New Command:',
+                                                font=('Arial', 15)
+                                                )
         self.command_entry = tk.Entry(self.main_frame,
                                       font=('Arial', 20),
                                       fg='green',
@@ -376,15 +387,16 @@ class Server_frame():
                               text="Send",
                               command= lambda: run_login.server.send_command(self.command_entry.get())
                               )
-        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.output_label.place(x=0, y=0)
-        self.print_output_label.pack()
+        self.output_label.place(x=50, y=20)
+        self.print_output_label.pack(fill='both', expand=True)
+        self.print_new_command_label.place(x=50, y=730)
         self.command_entry.place(x=50, y=760)
         self.send.place(x=450, y=825)
 
-        self.out_put_frame.config(yscrollcommand=self.scrollbar.set)
-        self.scrollbar.config(command=self.print_output_label.yview)
+        # self.out_put_frame.config(yscrollcommand=self.scrollbar.set)
+        # self.scrollbar.config(command=self.print_output_label.yview)
 
     def file_transfer_page(self):
         self.indicate(self.file_transfer_btn)
