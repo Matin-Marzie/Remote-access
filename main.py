@@ -16,30 +16,39 @@ is_user_connected = False
 class Server():
 
     def __init__(self):
+        # This socket is for creating connection with client, after the connection, all the commands of the Command Line will be send with this socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # This is the voice chat socket
         self.voice_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+        # All the threads
         self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
 
-        self.connected = True
-        self.server_listen_acccept_bool = True
+        # We stop the threads using boolean variables, indeed we break the loop of the function  
         self.recv_out_put_bool = True
 
+        self.is_client_connected = True
+        self.server_listen_acccept_bool = True
 
+    # This function checks if we can start a server on given ip address and port, if yes we start listening
     def server_listen_accept(self, ip_addr, port):
         try:
             self.server_socket.bind((ip_addr, int(port)))
+            self.server_socket.listen(1)
         except Exception as error:
             print(error)
-        self.server_socket.listen()
+
         run_login.run_server.listen_btn.config(state='disabled')
         run_login.run_server.print_listening.config(text='Listening...')
+        
 
-        while self.connected and self.server_listen_acccept_bool:
+        while self.server_listen_acccept_bool:
             try:
                 self.client, self.addr = self.server_socket.accept()
                 print(f"connected {self.addr[0]}, {self.addr[1]}")
-
+                
+                # After the connection, first we receive the client username
                 self.client_username = self.client.recv(1024).decode()
                 print(self.client_username)
 
@@ -54,11 +63,11 @@ class Server():
 
         
         
-
+    # If the client is connected to our server
     def send_command(self):
         self.cmnd = run_login.run_server.command_entry.get()
         run_login.run_server.command_entry.delete(0, tk.END)
-        if self.connected == True:
+        if self.is_client_connected == True:
             if self.cmnd != "":
                 if self.cmnd == "clear" or self.cmnd == "cls":
                     run_login.run_server.output_list.clear()
@@ -73,7 +82,7 @@ class Server():
         
 
     def recv_out_put(self):
-        while self.connected and self.recv_out_put_bool:
+        while self.is_client_connected and self.recv_out_put_bool:
             self.output = self.client.recv(1024).decode()
             run_login.run_server.output_list.append(self.output)
             destroy_old_frames(run_login.run_server.inner_frame)
@@ -201,6 +210,7 @@ class Server_frame():
 
         destroy_old_frames(window)
 
+
         # Frames
         self.options_frame = tk.Frame(window)               # Left bar (options frame)
         self.main_frame = tk.Frame(window)                  # Middle bar
@@ -282,10 +292,12 @@ class Server_frame():
 
 
 
-    # Each time when we change page pressing any button on option(left) bar:
-    # 1) we destroy old pages on main frame
-    # 2) we highlit the pressed button by changing its color from #00BFFF to #63e53f #00BFFF #0080FF
-    # 3) display the pressed button page
+    # Each time when we change page, pressing any button on option(left) bar:
+    # 1) We destroy old pages(frames) on the main frame
+    #    using the function: destroy_old_frames()
+    # 2) We highlit the pressed button by changing it's color to #0080FF
+    #    using the function: indicate()
+    # 3) Display the pressed button page
 
     def hide_indicator(self):
         self.choose_user_btn.config(bg='#85d5fb')
@@ -302,23 +314,22 @@ class Server_frame():
         destroy_old_frames(self.main_frame)
 
 
+    # This fuction will be activated when server-user fills ip address, port and presses the start button
     def listen_btn_click(self):
         self.server_ip = self.server_ip_addr_entry.get()
         self.server_port = self.server_port_entry.get()
 
-        if self.server_ip == "":
-            run_login.run_server.error_label.config(text='Ip address can not be empty!\nRTFM')
+        if not is_valid_ip_address(self.server_ip):
+            run_login.run_server.error_label.config(text='Invalid ip address!\nRTFM')
             run_login.run_server.error_label.pack()
-        elif self.server_port == "":
-            run_login.run_server.error_label.config(text='Port can not be empty!\nRTFM')
+        elif not is_valid_port(self.server_port):
+            run_login.run_server.error_label.config(text='Invalid port!\nRTFM')
             run_login.run_server.error_label.pack()
-        elif not is_valid_ip_address(self.server_ip):
-            run_login.run_server.error_label.config(text='Invalid ip address\nRTFM')
-            run_login.run_server.error_label.pack()
+        else:
+            run_login.run_server.error_label.destroy()
+            self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
+            self.listening_thread.start()
 
-
-        self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
-        self.listening_thread.start()
 
     def print_output(self):
         for i in self.output_list:
@@ -682,6 +693,15 @@ def is_valid_ip_address(ip_address):
             return False
     return True
 
+
+def is_valid_port(port):
+    try:
+        port = int(port)
+        if 1024 < port and port < 65535:
+            return True
+        return True
+    except ValueError:
+        return False
 
 def exit_program():
     root.destroy()
