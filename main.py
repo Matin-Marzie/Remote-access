@@ -7,8 +7,9 @@ from time import sleep
 import subprocess
 import os
 
+# All the buttons color is #85d5fb
 btn_color="#85d5fb"
-
+is_user_connected = False
 
 
 # ----------server-socket----------
@@ -26,10 +27,13 @@ class Server():
 
 
     def server_listen_accept(self, ip_addr, port):
-        self.server_socket.bind((ip_addr, port))
+        try:
+            self.server_socket.bind((ip_addr, int(port)))
+        except Exception as error:
+            print(error)
         self.server_socket.listen()
-
-        run_login.run_server.print_listening.pack()
+        run_login.run_server.listen_btn.config(state='disabled')
+        run_login.run_server.print_listening.config(text='Listening...')
 
         while self.connected and self.server_listen_acccept_bool:
             try:
@@ -42,6 +46,7 @@ class Server():
                 self.server_listen_accept_bool = False
                 self.recv_out_put_thread.start()
                 run_login.run_server.command_page()
+                root.configure(background='green')
             except:
                 self.server_socket.close()
                 print("failed , server_listen_accept, while True, except ERROR")
@@ -101,13 +106,14 @@ class Client():
     def client_connect(self, ip_addr, port):
         while self.connected and self.stop_client_connect_loop:
             try:
-                self.client_socket.connect((ip_addr, int(port)))
+                self.client_socket.connect((str(ip_addr), int(port)))
                 self.client_socket.send(self.client_windows_username.encode())
                 self.get_send_command_thread.start()
 
                 self.stop_client_connect_loop = False
                 run_login.run_client.print_connected_label.pack()
                 run_login.run_client.print_connecting_label.destroy()
+                root.configure(background='green')
             except:
                 run_login.run_client.print_connecting_label.pack()
                 sleep(1)
@@ -298,9 +304,18 @@ class Server_frame():
 
     def listen_btn_click(self):
         self.server_ip = self.server_ip_addr_entry.get()
-        self.server_port = int(self.server_port_entry.get())
+        self.server_port = self.server_port_entry.get()
 
-        self.listen_btn.config(state='disabled')
+        if self.server_ip == "":
+            run_login.run_server.error_label.config(text='Ip address can not be empty!\nRTFM')
+            run_login.run_server.error_label.pack()
+        elif self.server_port == "":
+            run_login.run_server.error_label.config(text='Port can not be empty!\nRTFM')
+            run_login.run_server.error_label.pack()
+        elif not is_valid_ip_address(self.server_ip):
+            run_login.run_server.error_label.config(text='Invalid ip address\nRTFM')
+            run_login.run_server.error_label.pack()
+
 
         self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
         self.listening_thread.start()
@@ -317,13 +332,15 @@ class Server_frame():
                                         )
             self.print_output_label.pack(fill='both', expand=True)
 
-    # Pages
+    # __________All the Pages that the user can access pressing the left bar buttons___________
 
+    # ----------Back page----------
     def choose_user_page(self):
         Login_frame(root)
 
 
 
+    # ----------Connection page----------
     def connect_page(self):
         self.indicate(self.connect_btn)
         self.connect_frame = tk.Frame(self.main_frame)
@@ -336,39 +353,57 @@ class Server_frame():
         self.listening_label = tk.Label(self.connect_frame,)
         self.server_ip_addr_label = tk.Label(self.connect_frame,
                                              text='IP Addr',
-                                             font="Verdana",
-                                             width=0,height=0,
-                                             anchor="ne"
+                                             font=("Verdana", 15),
+                                             width=0,
+                                             height=5,
+                                             anchor='s'
                                              )
         self.server_ip_addr_entry = tk.Entry(self.connect_frame,
-                                             width=50
+                                             font=("Verdana", 13),
+                                             width=40
                                              )
-        self.server_ip_addr_entry.insert(0, "127.0.0.1")
+        self.server_ip_addr_entry.insert(0, get_private_ip_address())
         self.server_port_label = tk.Label(self.connect_frame,
                                           text='PORT',
-                                          font="Verdana",
-                                          width=0,height=0,
-                                          anchor="ne"
+                                          font=("Verdana", 15),
+                                          width=0,
+                                          height=2,
+                                          anchor='s'
                                           )
         self.server_port_entry = tk.Entry(self.connect_frame,
-                                          width=50)
+                                          font=("Verdana", 13),
+                                          width=40
+                                          )
         self.server_port_entry.insert(0, 8119)
         self.listen_btn = tk.Button(self.connect_frame,
                                     bg="#85d5fb",
                                     text='START',
-                                    font="Verdana",width=0,height=0,anchor="w",command=lambda: self.listen_btn_click())
+                                    font="Verdana",
+                                    width=5,
+                                    height=1,
+                                    command=lambda: self.listen_btn_click()
+                                    )
         self.print_listening = tk.Label(self.connect_frame,
                                         font="Verdana",
-                                        text="Listening"
+                                        text="",
+                                        height=4
                                         )
+        self.error_label = tk.Label(self.connect_frame,
+                                    font=("Verdana", 15),
+                                    text='We show errors here',
+                                    bg='red',
+                                    fg='white'
+                                    )
 
         self.server_ip_addr_label.pack()
         self.server_ip_addr_entry.pack()
         self.server_port_label.pack()
         self.server_port_entry.pack()
         self.listen_btn.pack()
+        self.print_listening.pack()
 
     
+    # ----------Command Line page----------
     def command_page(self):
         self.indicate(self.command_btn)
         self.out_put_frame = tk.Frame(self.main_frame)
@@ -379,7 +414,7 @@ class Server_frame():
                                      )
         self.output_label.place(x=50, y=20)
         
-        # -------------------- scrollbar canvas --------------------
+        # ------------------------------scrollbar canvas------------------------------
         self.out_put_frame.place(x=50, y=50)
         self.out_put_frame.pack_propagate(False)
         self.out_put_frame.configure(width=860, height=670, background='black')
@@ -408,7 +443,7 @@ class Server_frame():
             self.canvas.itemconfigure(inner_frame_window, width=event.width)
         self.inner_frame.bind("configure>", on_inner_frame_resize)
         inner_frame_window = self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
-        # ------------------------------------------------------------
+        # ---------------------------------------------------------------------------
 
         self.print_new_command_label = tk.Label(self.main_frame,
                                                 text='New Command:',
@@ -430,6 +465,7 @@ class Server_frame():
         self.send.place(x=450, y=825)
 
 
+    # ----------Transfer page----------
     def file_transfer_page(self):
         self.indicate(self.file_transfer_btn)
         self.file_transfer_frame = tk.Frame(self.main_frame)
@@ -444,6 +480,7 @@ class Server_frame():
         self.rtfm_label.place(x=450, y=300)
 
 
+    # ----------Setting page----------
     def setting_page(self):
         self.indicate(self.setting_btn)
         self.setting_frame = tk.Frame(self.main_frame)
@@ -455,6 +492,7 @@ class Server_frame():
         # θα γράψουμε μετά
 
 
+    # ----------Help page----------
     def help_page(self):
         self.indicate(self.help_btn)
         page_frame = tk.Frame(self.main_frame)
@@ -491,7 +529,7 @@ class Client_frame():
         self.cln_right_frame.configure(width=300, height=880, background='white')
 
 
-        # options bar (left bar)
+        # ----------options bar (left bar)----------
         self.cln_choose_user_btn = tk.Button(window,
                                        text='Back',
                                        font=('Verdana', 25),
@@ -547,9 +585,11 @@ class Client_frame():
     
 
     # Pages
+    # ----------Back page----------
     def cln_choose_user_page(self):
         Login_frame(root)
 
+    # ----------Connection page----------
     def cln_connect_page(self):
         self.indicate(self.cln_connect_btn)
         self.cln_connect_frame = tk.Frame(self.cln_main_frame)
@@ -557,32 +597,34 @@ class Client_frame():
 
         self.client_ip_addr_label = tk.Label(self.cln_main_frame,
                                              text='SERVER-IP',
-                                             font="Verdana",
+                                             font=("Verdana", 15),
                                              width=0,
-                                             height=0,
-                                             anchor="ne"
+                                             height=5,
+                                             anchor="s"
                                              )
         self.client_ip_addr_entry = tk.Entry(self.cln_main_frame,
-                                             width=50
+                                             font=("Verdana", 13),
+                                             width=40
                                              )
-        self.client_ip_addr_entry.insert(0, "127.0.0.1")
+        self.client_ip_addr_entry.insert(0, get_private_ip_address())
         self.client_port_label = tk.Label(self.cln_main_frame,
                                           text='PORT',
-                                          font="Verdana",
+                                          font=("Verdana", 15),
                                           width=0,
-                                          height=0,
-                                          anchor="ne"
+                                          height=2,
+                                          anchor="s"
                                           )
         self.client_port_entry = tk.Entry(self.cln_main_frame,
-                                          width=50
+                                          font=("Verdana", 13),
+                                          width=40
                                           )
         self.client_port_entry.insert(0, 8119)
         self.client_connect_server = tk.Button(self.cln_main_frame,
                                                bg="#85d5fb",
                                                text='START',
                                                font="Verdana",
-                                               width=0,
-                                               height=0,
+                                               width=5,
+                                               height=1,
                                                anchor="center",
                                                command=lambda: self.client_connect_click()
                                                )
@@ -601,6 +643,7 @@ class Client_frame():
         self.client_port_entry.pack()
         self.client_connect_server.pack()
 
+    # ----------Help page----------
     def cln_help_page(self):
         self.indicate(self.cln_help_btn)
         self.cln_help_frame = tk.Frame(self.cln_main_frame)
@@ -608,19 +651,48 @@ class Client_frame():
 
 
 
+
+
+
 def destroy_old_frames(frame):
         for frame in frame.winfo_children():
             frame.destroy()
-        
+
+
+def get_private_ip_address():
+    try:
+        temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        temp_socket.connect(('8.8.8.8', 80))
+        ip_address = temp_socket.getsockname()[0]
+    except socket.error:
+        ip_address = '127.0.0.1'
+    finally:
+        temp_socket.close()
+    return ip_address
+
+
+def is_valid_ip_address(ip_address):
+    segments = ip_address.split(".")
+    if len(segments) != 4:
+        return False
+    for segment in segments:
+        if not segment.isdigit():
+            return False
+        if int(segment) < 0 or int(segment) > 255:
+            return False
+    return True
+
 
 def exit_program():
     root.destroy()
     exit()
 
 
+
+
 root = tk.Tk()
 root.geometry("1600x900")
-root.configure(background='#000000')
+root.configure(background='red')
 root.title("Matin")
 
 # Runnig program 
