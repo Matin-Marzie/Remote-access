@@ -7,12 +7,15 @@ from time import sleep
 import subprocess
 import os
 
-# All the buttons color is #85d5fb
-btn_color="#85d5fb"
-is_user_connected = False
+# All the buttons colors:
+button_color = '#85d5fb'
+pressed_button_color = '#0080FF'
+
+#font
+font_name = 'Verdana'
 
 
-# ----------server-socket----------
+# ____________________server-socket____________________
 class Server():
 
     def __init__(self):
@@ -28,7 +31,8 @@ class Server():
         # We stop the threads using boolean variables, indeed we break the loop of the function  
         self.recv_out_put_bool = True
 
-        self.is_client_connected = True
+        self.is_client_connected = False
+        self.is_server_listening = False
         self.server_listen_acccept_bool = True
 
     # This function checks if we can start a server on given ip address and port, if yes we start listening
@@ -36,38 +40,54 @@ class Server():
         try:
             self.server_socket.bind((ip_addr, int(port)))
             self.server_socket.listen(1)
-        except Exception as error:
-            print(error)
+            run_login.run_server.listen_btn.config(state='disabled')
+            run_login.run_server.print_server_connection_state.config(text='Listening...')
+            if run_login.run_server.socket_error.winfo_exists():
+                run_login.run_server.socket_error.destroy()
+            self.is_server_listening = True
 
-        run_login.run_server.listen_btn.config(state='disabled')
-        run_login.run_server.print_listening.config(text='Listening...')
+            while self.server_listen_acccept_bool:
+                try:
+                    self.client, self.addr = self.server_socket.accept()
+                    print(f"connected {self.addr[0]}, {self.addr[1]}")
+                    run_login.run_server.addr_0_label.config(text=self.addr[0])
+                    
+                    # After the connection, first we receive the client username
+                    self.client_username = self.client.recv(1024).decode()
+                    print(self.client_username)
+
+                    self.server_listen_accept_bool = False
+                    self.is_server_listening = False
+                    self.is_client_connected = True 
+
+                    # After the connection, the user page will be chaged automaticlly to command Line page
+                    run_login.run_server.command_page()
+                    self.recv_out_put_thread.start()
+
+                    # After connection, we change the background color from "red" to "green"
+                    root.configure(background='green')
+                except:
+                    self.server_socket.close()
+                    print("failed , server_listen_accept, while True, except ERROR")
+                    sleep(3)
+                    break
+
+        # If we can't creat server and start listening, we show to the user the reason(error)
+        except socket.error as error:
+            run_login.run_server.socket_error.pack()
+            run_login.run_server.socket_error.config(text=error)
+
+
         
 
-        while self.server_listen_acccept_bool:
-            try:
-                self.client, self.addr = self.server_socket.accept()
-                print(f"connected {self.addr[0]}, {self.addr[1]}")
-                
-                # After the connection, first we receive the client username
-                self.client_username = self.client.recv(1024).decode()
-                print(self.client_username)
-
-                self.server_listen_accept_bool = False
-                self.recv_out_put_thread.start()
-                run_login.run_server.command_page()
-                root.configure(background='green')
-            except:
-                self.server_socket.close()
-                print("failed , server_listen_accept, while True, except ERROR")
-                sleep(3)
 
         
         
-    # If the client is connected to our server
+    # Whith this fuction we send our command to the client
     def send_command(self):
         self.cmnd = run_login.run_server.command_entry.get()
         run_login.run_server.command_entry.delete(0, tk.END)
-        if self.is_client_connected == True:
+        if self.is_client_connected :
             if self.cmnd != "":
                 if self.cmnd == "clear" or self.cmnd == "cls":
                     run_login.run_server.output_list.clear()
@@ -78,7 +98,7 @@ class Server():
                     run_login.run_server.output_list.append(f'{self.client_username}:> {self.cmnd}')
                     self.client.send(self.cmnd.encode())
         else:
-            print("NOT connected!")
+            print("client is NOT connected!")
         
 
     def recv_out_put(self):
@@ -99,42 +119,54 @@ class Server():
 
 
 
-
-# ----------client-socket----------
+# ____________________client-socket____________________
 class Client():
+
     def __init__(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.get_send_command_thread = threading.Thread(target=self.get_send_command, args=())
 
         self.client_windows_username = getuser()
-        self.connected = True
-        self.stop_client_connect_loop = True
+
+        self.is_client_connecting = False
+        self.is_connected_to_server = False
         self.stop_get_send_command_loop = True
 
+
     def client_connect(self, ip_addr, port):
-        while self.connected and self.stop_client_connect_loop:
+        self.is_client_connecting = True
+        # didn't finish yet this part, for now if there is not a server listening, just prints connecting
+        while not self.is_connected_to_server:
             try:
                 self.client_socket.connect((str(ip_addr), int(port)))
-                self.client_socket.send(self.client_windows_username.encode())
-                self.get_send_command_thread.start()
+                
+                self.is_connected_to_server = True
+            except Exception as error:
+                print(error)
+                try:
+                    run_login.run_client.print_connection_state_label.config(text='Connecting')
+                    sleep(1)
+                    run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                    sleep(1)
+                    run_login.run_client.print_connection_state_label.config(text="Connecting..")
+                    sleep(1)
+                    run_login.run_client.print_connection_state_label.config(text="Connecting...")
+                    sleep(1)
+                except:
+                    sleep(1)
 
-                self.stop_client_connect_loop = False
-                run_login.run_client.print_connected_label.pack()
-                run_login.run_client.print_connecting_label.destroy()
-                root.configure(background='green')
-            except:
-                run_login.run_client.print_connecting_label.pack()
-                sleep(1)
-                run_login.run_client.print_connecting_label.config(text="Connecting.")
-                sleep(1)
-                run_login.run_client.print_connecting_label.config(text="Connecting..")
-                sleep(1)
-                run_login.run_client.print_connecting_label.config(text="Connecting...")
-                sleep(1)
+        self.client_socket.send(self.client_windows_username.encode())
+        self.get_send_command_thread.start()
+
+        run_login.run_client.client_connect_server.config(state='disabled')
+        root.configure(background='green')
+
+        self.is_client_connecting = False
+                
 
     def get_send_command(self):
-        while self.connected and self.stop_get_send_command_loop:
+        while self.stop_get_send_command_loop:
             self.command = self.client_socket.recv(1024).decode()
             if self.command == "exit":
                 exit_program()
@@ -152,135 +184,152 @@ class Client():
 
 
 
-# ----------login-window----------
+# ____________________login-window____________________
 class Login_frame():
     
     def __init__(self, window):
 
         destroy_old_frames(window)
         
-        # Frame
+        # The Frame
         self.login_frame = tk.Frame(window)
-        
-        self.login_frame.pack()
-        
-        # Content
 
+        self.login_frame.place(x=10, y=10)
+        self.login_frame.pack_propagate(False)
+        self.login_frame.configure(width=1580, height=880, background='white')
+        
+        # The Content
         self.choose_label = tk.Label(self.login_frame,
-                                text="CHOOSE USER",font=("Verdana"),width=90,height=32,bg="white"
+                                     text="CHOOSE USER",
+                                     font=(font_name, 15),
+                                     bg="white",
+                                     fg='black'
                                      )
         self.server_btn = tk.Button(self.login_frame,
-                               text="SERVER",font="Verdana",bg=btn_color,fg="black",width=90,height=2,
-                               command=self.choosen_server
-                               )
+                                    text="SERVER",
+                                    font=(font_name),
+                                    bg=button_color,
+                                    fg='black',
+                                    width=90,height=2,
+                                    command=self.choosen_server
+                                    )
         self.client_btn = tk.Button(self.login_frame,
-                               text="CLIENT",font="Verdana",bg=btn_color,fg="black",width=90,height=2,
-                               command=self.choosen_client
-                               )
+                                    text="CLIENT",
+                                    font=(font_name),
+                                    bg=button_color,
+                                    fg='black',
+                                    width=90,height=2,
+                                    command=self.choosen_client
+                                    )
 
         # Appending our content
-        self.choose_label.pack()
-        self.server_btn.pack()
-        self.client_btn.pack()
+        self.choose_label.place(x=715, y=310)
+        self.server_btn.place(x=320, y=520)
+        self.client_btn.place(x=320, y=570)
         
 
     # if user chooses server
     def choosen_server(self):
-        self.run_server = Server_frame(root)
-        self.run_server.connect_page()                       # we display connect_page() for default
-        self.run_server.connect_btn.config(bg='#0080FF')     # also highlit it's button #00BFFF #0080FF
-
         self.server = Server()
+
+        self.run_server = Server_frame(root)
+
+        # we display connect page for default
+        self.run_server.connect_page()
+
 
     # if user chooses client
     def choosen_client(self):
-        self.run_client = Client_frame(root)
-        self.run_client.cln_connect_page()
-        self.run_client.cln_connect_btn.config(bg='#0080FF') 
-
         self.client = Client()
 
+        self.run_client = Client_frame(root)
+
+        self.run_client.cln_connect_page()
 
 
 
 
-# ----------server-window----------
+
+
+# ____________________server-window____________________
 class Server_frame():
     def __init__(self, window):
 
         destroy_old_frames(window)
 
 
-        # Frames
-        self.options_frame = tk.Frame(window)               # Left bar (options frame)
+        # --------------------Frames--------------------
+        self.options_frame = tk.Frame(window)               # Left bar
         self.main_frame = tk.Frame(window)                  # Middle bar
         self.right_frame = tk.Frame(window)                 # right bar 
 
-        #showing frame
+        # Showing the Frames
         self.options_frame.place(x=10, y=10)
         self.options_frame.pack_propagate(False)            # False: we can resize the frame and it will not cover all the window automaticlly
-        self.options_frame.configure(width=300, height=880, background='white')
+        self.options_frame.configure(width=300, height=880)
 
         self.main_frame.place(x=320, y=10)  
         self.main_frame.pack_propagate(False)
-        self.main_frame.configure(width=960, height=880)
+        self.main_frame.configure(width=960, height=880, background='white')
 
         self.right_frame.place(x=1290, y=10)
         self.right_frame.pack_propagate(False)
         self.right_frame.configure(width=300, height=880, background='white')
 
 
-        # Left bar (option bar)
+        # --------------------Left bar (Options bar)--------------------
         self.choose_user_btn = tk.Button(self.options_frame,
                                        text='Back',
-                                       font=('Verdana', 25),
-                                       bg='#85d5fb',
-                                       padx=20,width=10,height=1,
-                                       pady=1,anchor="n",
+                                       font=(font_name, 25),
+                                       bg=button_color,
+                                       padx=20,pady=1,
+                                       width=10,height=1,
+                                       anchor="n",
                                        command=lambda: (self.choose_user_page())
                                        )
         self.connect_btn = tk.Button(self.options_frame,
                                      text='Connection',
-                                     font=('Verdana', 25),
-                                     bg='#85d5fb',
-                                     padx=20,width=10,height=1,
-                                     pady=1,anchor="n",
+                                     font=(font_name, 25),
+                                     bg=button_color,
+                                     padx=20,pady=1,
+                                     width=10,height=1,
+                                     anchor="n",
                                      command=lambda: (self.connect_page())
                                      )
         self.command_btn = tk.Button(self.options_frame,
                                      text='Command Line',
-                                     font=('Verdana', 25),
-                                     bg='#85d5fb',
+                                     font=(font_name, 25),
+                                     bg=button_color,
                                      padx=20,width=10,height=1,
                                      pady=1,anchor="n",
                                      command=lambda: (self.command_page())
                                      )
         self.file_transfer_btn = tk.Button(self.options_frame,
                                        text='Transfer',
-                                       font=('Verdana', 25),
-                                       bg='#85d5fb',
+                                       font=(font_name, 25),
+                                       bg=button_color,
                                        padx=20,width=10,height=1,
                                        pady=1,anchor="n",
                                        command=lambda: (self.file_transfer_page())
                                        )
         self.setting_btn = tk.Button(self.options_frame,
                                      text='Setting',
-                                     font=('Verdana', 25),
-                                     bg='#85d5fb',
+                                     font=(font_name, 25),
+                                     bg=button_color,
                                      padx=20,width=10,height=1,
                                      pady=1,anchor="n",
                                      command=lambda: (self.setting_page())
                                      )
         self.help_btn = tk.Button(self.options_frame,
                                   text='Help',
-                                  font=('Verdana', 25),
-                                  bg='#85d5fb',
+                                  font=(font_name, 25),
+                                  bg=button_color,
                                   padx=20,width=10,height=1,
                                   pady=1,anchor="n",
                                   command=lambda: (self.help_page())
                                   )
 
-        # Showing option bar
+        # Showing the Options bar
         self.choose_user_btn.place(x=10, y=50)
         self.connect_btn.place(x=10, y=130)
         self.command_btn.place(x=10, y=210)
@@ -289,61 +338,56 @@ class Server_frame():
         self.help_btn.place(x=10, y=450)
 
 
+        # --------------------right bar--------------------
+        # ----------Client----------
+        self.right_bar_client_frame = tk.Frame(self.right_frame)
+
+        self.right_bar_client_frame.place(x=5, y=5)
+        self.right_bar_client_frame.pack_propagate(False)
+        self.right_bar_client_frame.configure(width=290, height=280)
+        
+        self.right_bar_client_label = tk.Label(self.right_bar_client_frame,
+                               font=(font_name, 15),
+                               text='Client',
+                               padx=0, pady=25
+                               )
+        self.addr_0_label = tk.Label(self.right_bar_client_frame,
+                               font=(font_name, 15),
+                               text='',
+                               padx=20, pady=2,
+                               anchor='nw'
+                               )
+        self.addr_1_label = tk.Label(self.right_bar_client_frame,
+                               font=(font_name, 15),
+                               text='',
+                               padx=20, pady=2,
+                               anchor='ne'
+                               )
+        
+        self.right_bar_client_label.pack()
+        self.addr_0_label.pack(side='left', fill='both')
+        self.addr_1_label.pack(side='right', fill='both')
+
+
+        # ----------Notification----------
+        self.right_bar_notification_frame = tk.Frame(self.right_frame)
+
+        self.right_bar_notification_frame.place(x=5, y=290)
+        self.right_bar_notification_frame.pack_propagate(False)
+        self.right_bar_notification_frame.configure(width=290, height=300)
+
+        # ----------voice chat----------
+        self.right_bar_voice_frame = tk.Frame(self.right_frame)
+
+        self.right_bar_voice_frame.place(x=5, y=595)
+        self.right_bar_voice_frame.pack_propagate(False)
+        self.right_bar_voice_frame.configure(width=290, height=280)
 
 
 
-    # Each time when we change page, pressing any button on option(left) bar:
-    # 1) We destroy old pages(frames) on the main frame
-    #    using the function: destroy_old_frames()
-    # 2) We highlit the pressed button by changing it's color to #0080FF
-    #    using the function: indicate()
-    # 3) Display the pressed button page
 
-    def hide_indicator(self):
-        self.choose_user_btn.config(bg='#85d5fb')
-        self.connect_btn.config(bg='#85d5fb')
-        self.command_btn.config(bg='#85d5fb')
-        self.file_transfer_btn.config(bg='#85d5fb')
-        self.setting_btn.config(bg='#85d5fb')
-        self.help_btn.config(bg='#85d5fb')
-
-
-    def indicate(self, label):
-        self.hide_indicator()
-        label.config(bg='#0080FF')
-        destroy_old_frames(self.main_frame)
-
-
-    # This fuction will be activated when server-user fills ip address, port and presses the start button
-    def listen_btn_click(self):
-        self.server_ip = self.server_ip_addr_entry.get()
-        self.server_port = self.server_port_entry.get()
-
-        if not is_valid_ip_address(self.server_ip):
-            run_login.run_server.error_label.config(text='Invalid ip address!\nRTFM')
-            run_login.run_server.error_label.pack()
-        elif not is_valid_port(self.server_port):
-            run_login.run_server.error_label.config(text='Invalid port!\nRTFM')
-            run_login.run_server.error_label.pack()
-        else:
-            run_login.run_server.error_label.destroy()
-            self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
-            self.listening_thread.start()
-
-
-    def print_output(self):
-        for i in self.output_list:
-            self.print_output_label = tk.Label(self.inner_frame,
-                                        text=i,
-                                        font=('Arial', 20),
-                                        fg='green',
-                                        bg='black',
-                                        anchor='nw',
-                                        justify='left'
-                                        )
-            self.print_output_label.pack(fill='both', expand=True)
-
-    # __________All the Pages that the user can access pressing the left bar buttons___________
+    # --------------------middle bar--------------------
+    # All the Pages that the user can access pressing the left bar buttons
 
     # ----------Back page----------
     def choose_user_page(self):
@@ -351,67 +395,88 @@ class Server_frame():
 
 
 
-    # ----------Connection page----------
+    # --------------------Connection page--------------------
     def connect_page(self):
         self.indicate(self.connect_btn)
+
         self.connect_frame = tk.Frame(self.main_frame)
         
-        self.connect_frame.place(x=0, y=0)
+        self.connect_frame.place(x=5, y=5)
         self.connect_frame.pack_propagate(False)
-        self.connect_frame.configure(width=960, height=880)
+        self.connect_frame.configure(width=950, height=870)
 
 
-        self.listening_label = tk.Label(self.connect_frame,)
         self.server_ip_addr_label = tk.Label(self.connect_frame,
                                              text='IP Addr',
-                                             font=("Verdana", 15),
+                                             font=(font_name, 15),
                                              width=0,
                                              height=5,
                                              anchor='s'
                                              )
         self.server_ip_addr_entry = tk.Entry(self.connect_frame,
-                                             font=("Verdana", 13),
+                                             font=(font_name, 13),
                                              width=40
                                              )
-        self.server_ip_addr_entry.insert(0, get_private_ip_address())
         self.server_port_label = tk.Label(self.connect_frame,
                                           text='PORT',
-                                          font=("Verdana", 15),
+                                          font=(font_name, 15),
                                           width=0,
                                           height=2,
                                           anchor='s'
                                           )
         self.server_port_entry = tk.Entry(self.connect_frame,
-                                          font=("Verdana", 13),
+                                          font=(font_name, 13),
                                           width=40
                                           )
-        self.server_port_entry.insert(0, 8119)
         self.listen_btn = tk.Button(self.connect_frame,
                                     bg="#85d5fb",
                                     text='START',
-                                    font="Verdana",
+                                    font=font_name,
                                     width=5,
                                     height=1,
                                     command=lambda: self.listen_btn_click()
                                     )
-        self.print_listening = tk.Label(self.connect_frame,
-                                        font="Verdana",
+        self.print_server_connection_state = tk.Label(self.connect_frame,
+                                        font=(font_name, 20),
                                         text="",
                                         height=4
                                         )
         self.error_label = tk.Label(self.connect_frame,
-                                    font=("Verdana", 15),
-                                    text='We show errors here',
+                                    font=(font_name, 15),
+                                    text="We show errors here",
                                     bg='red',
                                     fg='white'
                                     )
+        self.socket_error = tk.Label(self.connect_frame,
+                                     font=(font_name, 20),
+                                     text='error',
+                                     bg='red',
+                                     fg='white'
+                                     )
+        
+        # We have written this code because when we change the page to connection page, we can see ip addr, port and the connection state
+        if run_login.server.is_server_listening:
+            self.server_ip_addr_entry.insert(0, run_login.run_server.server_ip)
+            self.server_port_entry.insert(0, run_login.run_server.server_port)
+            run_login.run_server.listen_btn.config(state='disabled')
+            run_login.run_server.print_server_connection_state.config(text='Listening...')
+ 
+        elif run_login.server.is_client_connected:
+            self.server_ip_addr_entry.insert(0, run_login.run_server.server_ip)
+            self.server_port_entry.insert(0, run_login.run_server.server_port)
+            run_login.run_server.listen_btn.config(state='disabled')    
+            run_login.run_server.print_server_connection_state.config(text='Connected')
+        else:
+            # if it is for the first time we are openning the connection page, our ip address is automaticlly inserted!
+            self.server_ip_addr_entry.insert(0, get_private_ip_address())
+            self.server_port_entry.insert(0, 8119)
 
         self.server_ip_addr_label.pack()
         self.server_ip_addr_entry.pack()
         self.server_port_label.pack()
         self.server_port_entry.pack()
         self.listen_btn.pack()
-        self.print_listening.pack()
+        self.print_server_connection_state.pack()
 
     
     # ----------Command Line page----------
@@ -421,11 +486,11 @@ class Server_frame():
 
         self.output_label = tk.Label(self.main_frame,
                                      text="Output:",
-                                     font=('Arial', 15)
+                                     font=(font_name, 15)
                                      )
         self.output_label.place(x=50, y=20)
         
-        # ------------------------------scrollbar canvas------------------------------
+        # ----------------------------------------scrollbar canvas----------------------------------------
         self.out_put_frame.place(x=50, y=50)
         self.out_put_frame.pack_propagate(False)
         self.out_put_frame.configure(width=860, height=670, background='black')
@@ -454,14 +519,14 @@ class Server_frame():
             self.canvas.itemconfigure(inner_frame_window, width=event.width)
         self.inner_frame.bind("configure>", on_inner_frame_resize)
         inner_frame_window = self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
-        # ---------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------
 
         self.print_new_command_label = tk.Label(self.main_frame,
                                                 text='New Command:',
-                                                font=('Arial', 15)
+                                                font=(font_name, 15)
                                                 )
         self.command_entry = tk.Entry(self.main_frame,
-                                      font=('Arial', 20),
+                                      font=(font_name, 20),
                                       fg='green',
                                       bg='black',
                                       width=57,
@@ -485,8 +550,8 @@ class Server_frame():
         self.file_transfer_frame.pack_propagate(False)
         self.file_transfer_frame.configure(width=960, height=880)
 
-
         # θα γράψουμε μετά
+
         self.rtfm_label = tk.Label(self.main_frame, text='RTFM', font=(5))
         self.rtfm_label.place(x=450, y=300)
 
@@ -516,7 +581,68 @@ class Server_frame():
 
 
 
-# ----------client-window----------
+    # --------------------object function--------------------
+
+    # Each time we change the pages, pressing any button on option(left) bar:
+    # 1) We destroy old pages(frames) on the main frame
+    #    using the function: destroy_old_frames()
+    # 2) We highlit the pressed button by changing it's color to pressed_button_color
+    #    using the function: indicate()
+    # 3) Display the pressed button page
+
+    def hide_indicator(self):
+        self.choose_user_btn.config(bg=button_color)
+        self.connect_btn.config(bg=button_color)
+        self.command_btn.config(bg=button_color)
+        self.file_transfer_btn.config(bg=button_color)
+        self.setting_btn.config(bg=button_color)
+        self.help_btn.config(bg=button_color)
+
+
+    def indicate(self, button):
+        self.hide_indicator()
+        button.config(bg=pressed_button_color)
+        destroy_old_frames(self.main_frame)
+
+
+    # This fuction will be activated when user presses the start button of connection page
+    def listen_btn_click(self):
+        self.server_ip = self.server_ip_addr_entry.get()
+        self.server_port = self.server_port_entry.get()
+
+
+        if not is_valid_ip_address(self.server_ip):
+            run_login.run_server.error_label.config(text='Invalid ip address!\nRTFM')
+            run_login.run_server.error_label.pack()
+        elif not is_valid_port(self.server_port):
+            run_login.run_server.error_label.config(text='Invalid port!\nRTFM')
+            run_login.run_server.error_label.pack()
+        elif run_login.run_server.error_label.winfo_exists():
+            run_login.run_server.error_label.destroy()
+        else:
+            run_login.run_server.error_label.destroy()
+            self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
+            self.listening_thread.start()
+
+
+    def print_output(self):
+        for i in self.output_list:
+            self.print_output_label = tk.Label(self.inner_frame,
+                                        text=i,
+                                        font=(font_name, 20),
+                                        fg='green',
+                                        bg='black',
+                                        anchor='nw',
+                                        justify='left'
+                                        )
+            self.print_output_label.pack(fill='both', expand=True)
+
+
+
+
+
+
+# ____________________client-window____________________
 class Client_frame():
     def __init__(self, window):
 
@@ -527,6 +653,7 @@ class Client_frame():
         self.cln_main_frame = tk.Frame(window)
         self.cln_right_frame = tk.Frame(window)
 
+        # Showing the Frames
         self.cln_options_frame.place(x=10, y=10)
         self.cln_options_frame.pack_propagate(False)
         self.cln_options_frame.configure(width=300, height=880, background='white')
@@ -540,29 +667,32 @@ class Client_frame():
         self.cln_right_frame.configure(width=300, height=880, background='white')
 
 
-        # ----------options bar (left bar)----------
+        # ----------options bar(left bar)----------
         self.cln_choose_user_btn = tk.Button(window,
                                        text='Back',
-                                       font=('Verdana', 25),
-                                       bg='#85d5fb',
-                                       padx=20,width=10,height=1,
-                                       pady=1,anchor="n",
+                                       font=(font_name, 25),
+                                       bg=button_color,
+                                       padx=20,pady=1,
+                                       width=10,height=1,
+                                       anchor="n",
                                        command=lambda: self.cln_choose_user_page()
                                        )
         self.cln_connect_btn = tk.Button(window,
                                      text='Connect',
-                                     font=('Verdana', 25),
-                                     bg='#85d5fb',
-                                     padx=20,width=10,height=1,
-                                     pady=1,anchor="n",
+                                     font=(font_name, 25),
+                                     bg=button_color,
+                                     padx=20,pady=1,
+                                     width=10,height=1,
+                                     anchor="n",
                                      command=lambda: self.cln_connect_page()
                                      )
         self.cln_help_btn = tk.Button(window,
                                   text='Help',
-                                  font=('Verdana', 25),
-                                  bg='#85d5fb',
-                                  padx=20,width=10,height=1,
-                                  pady=1,anchor="n",
+                                  font=(font_name, 25),
+                                  bg=button_color,
+                                  padx=20,pady=1,
+                                  width=10,height=1,
+                                  anchor="n",
                                   command=lambda: self.cln_help_page()
                                   )
         
@@ -574,24 +704,33 @@ class Client_frame():
 
 
     def hide_indicator(self):
-        self.cln_choose_user_btn.config(bg='#85d5fb')
-        self.cln_connect_btn.config(bg='#85d5fb')
-        self.cln_help_btn.config(bg='#85d5fb')
+        self.cln_choose_user_btn.config(bg=button_color)
+        self.cln_connect_btn.config(bg=button_color)
+        self.cln_help_btn.config(bg=button_color)
 
 
-    def indicate(self, label):
+    def indicate(self, button):
         self.hide_indicator()
-        label.config(bg='#0080FF')
+        button.config(bg=pressed_button_color)
         destroy_old_frames(self.cln_main_frame)
 
 
     def client_connect_click(self):
-        client_ip = self.client_ip_addr_entry.get()
-        client_port = self.client_port_entry.get()
-        self.client_connect_server.config(state='disabled')
+        self.client_ip = self.client_ip_addr_entry.get()
+        self.client_port = self.client_port_entry.get()
 
-        self.client_connection_thread = threading.Thread(target=run_login.client.client_connect, args=(client_ip, client_port))
-        self.client_connection_thread.start()
+        if not is_valid_ip_address(self.client_ip):
+            run_login.run_client.error_label.pack()
+            run_login.run_client.error_label.config(text=' Invalid Ip address! ')
+        elif not is_valid_port(self.client_port):
+            run_login.run_client.error_label.pack()
+            run_login.run_client.error_label.config(text=' Invalid Port! ')            
+        elif run_login.run_client.error_label.winfo_exists():
+            run_login.run_client.error_label.destroy()
+        else:
+            self.client_connection_thread = threading.Thread(target=run_login.client.client_connect, args=(self.client_ip, self.client_port))
+            self.client_connection_thread.start()
+            run_login.run_client.client_connect_server.config(state='disabled')
 
     
 
@@ -608,51 +747,72 @@ class Client_frame():
 
         self.client_ip_addr_label = tk.Label(self.cln_main_frame,
                                              text='SERVER-IP',
-                                             font=("Verdana", 15),
+                                             font=(font_name, 15),
                                              width=0,
                                              height=5,
                                              anchor="s"
                                              )
         self.client_ip_addr_entry = tk.Entry(self.cln_main_frame,
-                                             font=("Verdana", 13),
+                                             font=(font_name, 13),
                                              width=40
                                              )
-        self.client_ip_addr_entry.insert(0, get_private_ip_address())
         self.client_port_label = tk.Label(self.cln_main_frame,
                                           text='PORT',
-                                          font=("Verdana", 15),
+                                          font=(font_name, 15),
                                           width=0,
                                           height=2,
                                           anchor="s"
                                           )
         self.client_port_entry = tk.Entry(self.cln_main_frame,
-                                          font=("Verdana", 13),
+                                          font=(font_name, 13),
                                           width=40
                                           )
-        self.client_port_entry.insert(0, 8119)
         self.client_connect_server = tk.Button(self.cln_main_frame,
-                                               bg="#85d5fb",
+                                               bg=button_color,
                                                text='START',
-                                               font="Verdana",
+                                               font=(font_name),
                                                width=5,
                                                height=1,
                                                anchor="center",
                                                command=lambda: self.client_connect_click()
                                                )
-        self.print_connecting_label = tk.Label(self.cln_main_frame,
-                                                font="Verdana",
-                                                text="Connecting"
+        self.print_connection_state_label = tk.Label(self.cln_main_frame,
+                                                font=(font_name),
+                                                text="",
+                                                height=4
                                                 )
-        self.print_connected_label = tk.Label(self.cln_main_frame,
-                                                font="Verdana",
-                                                text="Connected"
-                                                )
+        self.error_label = tk.Label(self.cln_main_frame,
+                                    font=(font_name, 15),
+                                    text='We show errors here',
+                                    bg='red',
+                                    fg='white'
+                                    )
+        self.socket_error_label = tk.Label(self.cln_main_frame,
+                                    font=(font_name, 15),
+                                    text='We show socket-errors here',
+                                    bg='red',
+                                    fg='white'
+                                    )
+        
+        if run_login.client.is_client_connecting:
+            run_login.run_client.client_ip_addr_entry.insert(0, run_login.run_client.client_ip)
+            run_login.run_client.client_port_entry.insert(0, run_login.run_client.client_port)            
+            run_login.run_client.client_connect_server.config(state='disabled')
+        elif run_login.client.is_connected_to_server:
+            run_login.run_client.client_ip_addr_entry.insert(0, run_login.run_client.client_ip)
+            run_login.run_client.client_port_entry.insert(0, run_login.run_client.client_port)            
+            run_login.run_client.client_connect_server.config(state='disabled')
+            run_login.run_client.print_connection_state_label.config(text='Connected!')            
+        else:
+            self.client_ip_addr_entry.insert(0, get_private_ip_address())
+            self.client_port_entry.insert(0, 8119)
         
         self.client_ip_addr_label.pack()
         self.client_ip_addr_entry.pack()
         self.client_port_label.pack()
         self.client_port_entry.pack()
         self.client_connect_server.pack()
+        self.print_connection_state_label.pack()
 
     # ----------Help page----------
     def cln_help_page(self):
@@ -664,17 +824,20 @@ class Client_frame():
 
 
 
+# ____________________Functions____________________
 
 def destroy_old_frames(frame):
-        for frame in frame.winfo_children():
-            frame.destroy()
+    for children_frame in frame.winfo_children():
+        children_frame.destroy()
 
 
 def get_private_ip_address():
     try:
+        # If it is connected to Internet, the function returns the private ip address
         temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         temp_socket.connect(('8.8.8.8', 80))
         ip_address = temp_socket.getsockname()[0]
+        # otherwise return the local ip
     except socket.error:
         ip_address = '127.0.0.1'
     finally:
@@ -699,17 +862,20 @@ def is_valid_port(port):
         port = int(port)
         if 1024 < port and port < 65535:
             return True
-        return True
+        else:
+            return False
     except ValueError:
         return False
+
 
 def exit_program():
     root.destroy()
     exit()
 
+#__________________________________________________
 
 
-
+# Creating a window
 root = tk.Tk()
 root.geometry("1600x900")
 root.configure(background='red')
