@@ -49,12 +49,12 @@ class Server():
             while self.server_listen_acccept_bool:
                 try:
                     self.client, self.addr = self.server_socket.accept()
-                    print(f"connected {self.addr[0]}, {self.addr[1]}")
                     run_login.run_server.addr_0_label.config(text=self.addr[0])
+                    run_login.run_server.addr_1_label.config(text=self.addr[1])
                     
                     # After the connection, first we receive the client username
                     self.client_username = self.client.recv(1024).decode()
-                    print(self.client_username)
+                    run_login.run_server.right_bar_client_label.config(text=self.client_username)
 
                     self.server_listen_accept_bool = False
                     self.is_server_listening = False
@@ -74,6 +74,9 @@ class Server():
 
         # If we can't creat server and start listening, we show to the user the reason(error)
         except socket.error as error:
+            if str(error) == "[Errno 98] Address already in use":
+                run_login.run_server.print_server_connection_state.config(text="Use an other port and Try again!")
+
             run_login.run_server.socket_error.pack()
             run_login.run_server.socket_error.config(text=error)
 
@@ -136,25 +139,27 @@ class Client():
 
     def client_connect(self, ip_addr, port):
         self.is_client_connecting = True
-        # didn't finish yet this part, for now if there is not a server listening, just prints connecting
+
         while not self.is_connected_to_server:
             try:
                 self.client_socket.connect((str(ip_addr), int(port)))
                 
                 self.is_connected_to_server = True
-            except Exception as error:
-                print(error)
-                try:
-                    run_login.run_client.print_connection_state_label.config(text='Connecting')
-                    sleep(1)
-                    run_login.run_client.print_connection_state_label.config(text='Connecting.')
-                    sleep(1)
-                    run_login.run_client.print_connection_state_label.config(text="Connecting..")
-                    sleep(1)
-                    run_login.run_client.print_connection_state_label.config(text="Connecting...")
-                    sleep(1)
-                except:
-                    sleep(1)
+            except socket.error as error:
+                if str(error) == "[Errno 111] Connection refused":
+                    try:
+                        run_login.run_client.print_connection_state_label.config(text='Connecting')
+                        sleep(1)
+                        run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                        sleep(1)
+                        run_login.run_client.print_connection_state_label.config(text="Connecting..")
+                        sleep(1)
+                        run_login.run_client.print_connection_state_label.config(text="Connecting...")
+                        sleep(1)
+                    except:
+                        sleep(1)
+                else:
+                    run_login.run_client.print_connection_state_label.config(text=error)
 
         self.client_socket.send(self.client_windows_username.encode())
         self.get_send_command_thread.start()
@@ -364,7 +369,7 @@ class Server_frame():
                                anchor='ne'
                                )
         
-        self.right_bar_client_label.pack()
+        self.right_bar_client_label.pack(side='top')
         self.addr_0_label.pack(side='left', fill='both')
         self.addr_1_label.pack(side='right', fill='both')
 
@@ -376,6 +381,33 @@ class Server_frame():
         self.right_bar_notification_frame.pack_propagate(False)
         self.right_bar_notification_frame.configure(width=290, height=300)
 
+        self.right_bar_notification_label = tk.Label(self.right_bar_notification_frame,
+                                                     font=(font_name, 15),
+                                                     text='Notifications',
+                                                     padx=0, pady=10
+                                                     )
+        self.right_bar_notification_label.pack(side='top')
+
+        self.right_bar_notification_inner_frame = tk.Frame(self.right_bar_notification_frame)
+        self.right_bar_notification_inner_frame.pack()
+        
+        self.right_bar_notification_msg = tk.Text(self.right_bar_notification_inner_frame,
+                                                  font=(font_name),
+                                                  width=27, height=13,
+                                                  background='#e6e6e6'
+                                                  )
+        self.right_bar_notification_scrollbar = tk.Scrollbar(self.right_bar_notification_inner_frame,
+                                                             orient='vertical',
+                                                             command=self.right_bar_notification_msg.yview
+                                                             )
+        self.right_bar_notification_msg.configure(yscrollcommand=self.right_bar_notification_scrollbar.set)
+        self.right_bar_notification_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+    
+        self.right_bar_notification_msg.insert('end', 'hello world this is john smith and i am learning python')
+        self.right_bar_notification_msg.pack(side=tk.LEFT, fill='both', expand=True)
+
+
         # ----------voice chat----------
         self.right_bar_voice_frame = tk.Frame(self.right_frame)
 
@@ -383,6 +415,12 @@ class Server_frame():
         self.right_bar_voice_frame.pack_propagate(False)
         self.right_bar_voice_frame.configure(width=290, height=280)
 
+        self.right_bar_voice_chat_label = tk.Label(self.right_bar_voice_frame,
+                                                   font=(font_name, 15),
+                                                   text='Voice Chat',
+                                                   pady=20
+                                                   )
+        self.right_bar_voice_chat_label.pack(side='top')
 
 
 
@@ -390,8 +428,18 @@ class Server_frame():
     # All the Pages that the user can access pressing the left bar buttons
 
     # ----------Back page----------
+    # Δεν Δουλεύει και δεν τα κατάφερα ακόμα!
     def choose_user_page(self):
-        Login_frame(root)
+        if run_login.server is None:
+            pass
+        else:
+            del run_login.server
+        if run_login.run_server is None:
+            pass
+        else:
+            del run_login.run_server
+        
+        run_login
 
 
 
@@ -581,7 +629,7 @@ class Server_frame():
 
 
 
-    # --------------------object function--------------------
+    # --------------------object functions--------------------
 
     # Each time we change the pages, pressing any button on option(left) bar:
     # 1) We destroy old pages(frames) on the main frame
@@ -617,8 +665,6 @@ class Server_frame():
         elif not is_valid_port(self.server_port):
             run_login.run_server.error_label.config(text='Invalid port!\nRTFM')
             run_login.run_server.error_label.pack()
-        elif run_login.run_server.error_label.winfo_exists():
-            run_login.run_server.error_label.destroy()
         else:
             run_login.run_server.error_label.destroy()
             self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
@@ -725,8 +771,6 @@ class Client_frame():
         elif not is_valid_port(self.client_port):
             run_login.run_client.error_label.pack()
             run_login.run_client.error_label.config(text=' Invalid Port! ')            
-        elif run_login.run_client.error_label.winfo_exists():
-            run_login.run_client.error_label.destroy()
         else:
             self.client_connection_thread = threading.Thread(target=run_login.client.client_connect, args=(self.client_ip, self.client_port))
             self.client_connection_thread.start()
