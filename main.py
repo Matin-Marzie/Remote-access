@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import socket
 import threading
 from getpass import getuser
@@ -6,6 +7,7 @@ from platform import uname
 from time import sleep
 import subprocess
 import os
+import select
 
 # All the buttons colors:
 button_color = '#85d5fb'
@@ -25,16 +27,15 @@ class Server():
         # This is the voice chat socket
         self.voice_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        # All the threads
-        self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
 
         # We stop the threads using boolean variables, indeed we break the loop of the function  
         self.recv_out_put_bool = True
+        self.server_listen_acccept_bool = True
 
         self.is_client_connected = False
         self.is_server_listening = False
-        self.server_listen_acccept_bool = True
 
+    
     # This function checks if we can start a server on given ip address and port, if yes we start listening
     def server_listen_accept(self, ip_addr, port):
         try:
@@ -48,29 +49,39 @@ class Server():
 
             while self.server_listen_acccept_bool:
                 try:
-                    self.client, self.addr = self.server_socket.accept()
-                    run_login.run_server.addr_0_label.config(text=self.addr[0])
-                    run_login.run_server.addr_1_label.config(text=self.addr[1])
-                    
-                    # After the connection, first we receive the client username
-                    self.client_username = self.client.recv(1024).decode()
-                    run_login.run_server.right_bar_client_label.config(text=self.client_username)
+                    readable, _, _ = select.select([self.server_socket], [], [], 0.5)
 
-                    self.server_listen_accept_bool = False
-                    self.is_server_listening = False
-                    self.is_client_connected = True 
+                    if self.server_socket in readable:
+                        self.client, self.addr = self.server_socket.accept()
 
-                    # After the connection, the user page will be chaged automaticlly to command Line page
-                    run_login.run_server.command_page()
-                    self.recv_out_put_thread.start()
+                        self.client_username = self.client.recv(1024).decode()
+                        run_login.run_server.right_bar_client_label.config(text=self.client_username)
 
-                    # After connection, we change the background color from "red" to "green"
-                    root.configure(background='green')
-                except:
+                        root.configure(background='green')
+
+                        run_login.run_server.command_page()
+
+                        self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
+                        self.recv_out_put_thread.start()
+
+                        self.is_client_connected = True
+                        self.is_server_listening = False
+                        self.server_listen_accept_bool = False
+
+                        # After the connection, the user page will be chaged automaticlly to command Line page
+                        
+                        run_login.run_server.addr_0_label.config(text=self.addr[0])
+                        run_login.run_server.addr_1_label.config(text=self.addr[1])
+                        
+                        # After the connection, first we receive the client username
+
+
+                        # After connection, we change the background color from "red" to "green"
+
+                except socket.error as error:
                     self.server_socket.close()
-                    print("failed , server_listen_accept, while True, except ERROR")
-                    sleep(3)
-                    break
+
+            
 
         # If we can't creat server and start listening, we show to the user the reason(error)
         except socket.error as error:
@@ -79,10 +90,6 @@ class Server():
 
             run_login.run_server.socket_error.pack()
             run_login.run_server.socket_error.config(text=error)
-
-
-        
-
 
         
         
@@ -105,20 +112,12 @@ class Server():
         
 
     def recv_out_put(self):
-        while self.is_client_connected and self.recv_out_put_bool:
+        while self.recv_out_put_bool:
             self.output = self.client.recv(1024).decode()
             run_login.run_server.output_list.append(self.output)
             destroy_old_frames(run_login.run_server.inner_frame)
             run_login.run_server.print_output()
             
-
-    def voice_socket():
-        pass
-
-
-
-
-
 
 
 
@@ -134,44 +133,61 @@ class Client():
 
         self.is_client_connecting = False
         self.is_connected_to_server = False
-        self.stop_get_send_command_loop = True
+
+        self.client_connecting_bool = True
+        self.get_send_command_bool = True
 
 
     def client_connect(self, ip_addr, port):
         self.is_client_connecting = True
 
-        while not self.is_connected_to_server:
+        while self.client_connecting_bool:
             try:
                 self.client_socket.connect((str(ip_addr), int(port)))
-                
                 self.is_connected_to_server = True
+
             except socket.error as error:
+
                 if str(error) == "[Errno 111] Connection refused":
                     try:
                         run_login.run_client.print_connection_state_label.config(text='Connecting')
                         sleep(1)
-                        run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                        if self.client_connecting_bool:
+                            run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                        else:
+                            break
                         sleep(1)
                         run_login.run_client.print_connection_state_label.config(text="Connecting..")
+                        if self.client_connecting_bool:
+                            run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                        else:
+                            break
                         sleep(1)
                         run_login.run_client.print_connection_state_label.config(text="Connecting...")
+                        if self.client_connecting_bool:
+                            run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                        else:
+                            break
                         sleep(1)
+
                     except:
                         sleep(1)
                 else:
                     run_login.run_client.print_connection_state_label.config(text=error)
 
-        self.client_socket.send(self.client_windows_username.encode())
-        self.get_send_command_thread.start()
+                    
+        if self.is_connected_to_server:
+            self.client_socket.send(self.client_windows_username.encode())
+            self.get_send_command_thread.start()
 
-        run_login.run_client.client_connect_server.config(state='disabled')
-        root.configure(background='green')
+            run_login.run_client.client_connect_server.config(state='disabled')
+            root.configure(background='green')
 
         self.is_client_connecting = False
                 
 
     def get_send_command(self):
-        while self.stop_get_send_command_loop:
+        while self.get_send_command_bool:
             self.command = self.client_socket.recv(1024).decode()
             if self.command == "exit":
                 exit_program()
@@ -179,7 +195,12 @@ class Client():
                 os.chdir(self.command[3:])
                 self.client_socket.send(os.getcwd().encode())
             else:
-                self.output = subprocess.getoutput(self.command)
+                try:
+                    self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+                    self.output = self.completed_process.stdout.decode()
+                except subprocess.TimeoutExpired:
+                    self.output = "Command timed out after 2 seconds"
+                    
                 if self.output == "" or self.output == None:
                     self.output = "\n"
                     self.client_socket.send(self.output.encode())
@@ -194,14 +215,17 @@ class Login_frame():
     
     def __init__(self, window):
 
-        destroy_old_frames(window)
+        self.window = window
+
+        
+    def show(self):
+
+        destroy_old_frames(self.window)
         
         # The Frame
-        self.login_frame = tk.Frame(window)
+        self.login_frame = tk.Frame(self.window)
 
-        self.login_frame.place(x=10, y=10)
-        self.login_frame.pack_propagate(False)
-        self.login_frame.configure(width=1580, height=880, background='white')
+        
         
         # The Content
         self.choose_label = tk.Label(self.login_frame,
@@ -227,6 +251,9 @@ class Login_frame():
                                     command=self.choosen_client
                                     )
 
+        self.login_frame.place(x=10, y=10)
+        self.login_frame.pack_propagate(False)
+        self.login_frame.configure(width=1580, height=880, background='white')
         # Appending our content
         self.choose_label.place(x=715, y=310)
         self.server_btn.place(x=320, y=520)
@@ -430,17 +457,14 @@ class Server_frame():
     # ----------Back page----------
     # Δεν Δουλεύει και δεν τα κατάφερα ακόμα!
     def choose_user_page(self):
-        if run_login.server is None:
-            pass
-        else:
-            del run_login.server
-        if run_login.run_server is None:
-            pass
-        else:
-            del run_login.run_server
-        
-        run_login
 
+        run_login.server.server_listen_acccept_bool = False
+        run_login.server.recv_out_put_bool = False
+
+        del run_login.run_server
+        del run_login.server
+
+        run_login.show()
 
 
     # --------------------Connection page--------------------
@@ -781,7 +805,14 @@ class Client_frame():
     # Pages
     # ----------Back page----------
     def cln_choose_user_page(self):
-        Login_frame(root)
+        
+        run_login.client.client_connecting_bool = False
+        run_login.client.get_send_command_bool = False
+
+        del run_login.run_client
+        del run_login.client
+
+        run_login.show()
 
     # ----------Connection page----------
     def cln_connect_page(self):
@@ -913,8 +944,19 @@ def is_valid_port(port):
 
 
 def exit_program():
+    if hasattr(run_login, "server"):
+        run_login.server.server_listen_acccept_bool = False
+        run_login.server.recv_out_put_bool = False
+    if hasattr(run_login, "client"):
+        run_login.client.client_connecting_bool = False
+        run_login.client.get_send_command_bool = False
     root.destroy()
     exit()
+
+
+def x():
+    if messagebox.askokcancel("Quit", "Do you want to quit?"):
+        exit_program()
 
 #__________________________________________________
 
@@ -924,9 +966,11 @@ root = tk.Tk()
 root.geometry("1600x900")
 root.configure(background='red')
 root.title("Matin")
+root.protocol("WM_DELETE_WINDOW", x)
 
 # Runnig program 
 run_login = Login_frame(root)
+run_login.show()
 
 
 root.mainloop()
