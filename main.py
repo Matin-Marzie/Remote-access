@@ -5,6 +5,7 @@ import threading
 from getpass import getuser
 from platform import uname
 from time import sleep
+from time import time
 import subprocess
 import os
 import select
@@ -23,17 +24,20 @@ class Server():
     def __init__(self):
         # This socket is for creating connection with client, after the connection, all the commands of the Command Line will be send with this socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # This is the voice chat socket
+        self.ping_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.voice_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
         # We stop the threads using boolean variables, indeed we break the loop of the function  
+        self.is_client_connected = False
+        self.is_server_listening = False
+
         self.recv_out_put_bool = True
         self.server_listen_acccept_bool = True
 
-        self.is_client_connected = False
-        self.is_server_listening = False
+        self.accept_ping_bool = True
+        self.capturing_ping_bool = True
+
 
     
     # This function checks if we can start a server on given ip address and port, if yes we start listening
@@ -64,9 +68,12 @@ class Server():
                         self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
                         self.recv_out_put_thread.start()
 
-                        self.is_client_connected = True
                         self.is_server_listening = False
                         self.server_listen_accept_bool = False
+
+                        self.capture_ping_thread = threading.Thread(target=self.capture_ping ,args=(ip_addr, (int(port)+1), time()))
+                        self.capture_ping_thread.start()
+
 
                         # After the connection, the user page will be chaged automaticlly to command Line page
                         
@@ -97,7 +104,7 @@ class Server():
     def send_command(self):
         self.cmnd = run_login.run_server.command_entry.get()
         run_login.run_server.command_entry.delete(0, tk.END)
-        if self.is_client_connected :
+        if self.is_client_connected:
             if self.cmnd != "":
                 if self.cmnd == "clear" or self.cmnd == "cls":
                     run_login.run_server.output_list.clear()
@@ -106,19 +113,75 @@ class Server():
                 else:
                     run_login.run_server.output_list.append("------------------------------------------------------------------------------------------------------------------------")
                     run_login.run_server.output_list.append(f'{self.client_username}:> {self.cmnd}')
-                    self.client.send(self.cmnd.encode())
-        else:
-            print("client is NOT connected!")
+                    try:
+                        self.client.send(self.cmnd.encode())
+                    except:
+                        run_login.run_server.output_list.append("Oops! Can't send command! Client isn't connected!")
+                        destroy_old_frames(run_login.run_server.inner_frame)
+                        run_login.run_server.print_output()
+            else:
+                run_login.run_server.output_list.append("Oops! Command can't be Empty!")
+                destroy_old_frames(run_login.run_server.inner_frame)
+                run_login.run_server.print_output()
         
 
     def recv_out_put(self):
         while self.recv_out_put_bool:
-            self.output = self.client.recv(1024).decode()
-            run_login.run_server.output_list.append(self.output)
-            destroy_old_frames(run_login.run_server.inner_frame)
-            run_login.run_server.print_output()
+            try:
+                read, _, _ = select.select([self.client], [], [], 0.5)
+                if self.client in read:
+                    self.output = self.client.recv(1024).decode()
+                    if not self.output:
+                        self.client.close()
+                        self.is_client_connected = False
+                        break
+                    if self.recv_out_put_bool:
+                        run_login.run_server.output_list.append(self.output)
+                        destroy_old_frames(run_login.run_server.inner_frame)
+                        run_login.run_server.print_output()
+
+            except socket.error as error:
+                if str(error) == "[Errno 9] Bad file descriptor":
+                    pass
+                else:
+                    print(error)
+                    break
             
 
+    def capture_ping(self, ip_addr, port, started_time):
+        try:
+            self.ping_socket.bind((ip_addr, int(port)))
+            self.ping_socket.listen(1)
+
+            while self.accept_ping_bool:
+                self.client_ping, self.addr_ping = self.ping_socket.accept()
+                break
+
+
+            while self.capturing_ping_bool:
+                try:
+                    readable, _, _ = select.select([self.client_ping], [], [], 1)
+                    if self.client_ping in readable:
+                        self.ping = self.client_ping.recv(1024)
+                        if self.ping == b'ping':
+                            self.client_ping.sendall(b'pong')
+                            self.is_client_connected = True
+                            started_time = time()
+                    else:
+                        if (time() - started_time) > 9:
+                            sleep(1)
+                            print(time() - started_time)
+                            self.is_client_connected = False
+
+
+                except socket.error as error:
+                    print(error)
+                    sleep(1)
+
+
+        except socket.error as error:
+            sleep(1)
+            print(error)
 
 
 # ____________________client-socket____________________
@@ -126,6 +189,7 @@ class Client():
 
     def __init__(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.ping_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.get_send_command_thread = threading.Thread(target=self.get_send_command, args=())
 
@@ -133,9 +197,12 @@ class Client():
 
         self.is_client_connecting = False
         self.is_connected_to_server = False
+        self.ping_time_count = 0
 
         self.client_connecting_bool = True
         self.get_send_command_bool = True
+        self.cln_connect_ping_bool = True
+        self.cln_send_ping_bool = True
 
 
     def client_connect(self, ip_addr, port):
@@ -144,29 +211,29 @@ class Client():
         while self.client_connecting_bool:
             try:
                 self.client_socket.connect((str(ip_addr), int(port)))
+                self.start_pinging_thread = threading.Thread(target=self.start_pinging, args=(ip_addr, (int(port)+1), 3 ))
+                self.start_pinging_thread.start()
                 self.is_connected_to_server = True
+                self.client_connecting_bool = False
 
             except socket.error as error:
 
                 if str(error) == "[Errno 111] Connection refused":
                     try:
                         run_login.run_client.print_connection_state_label.config(text='Connecting')
+                        if not self.client_connecting_bool:
+                            break
                         sleep(1)
-                        if self.client_connecting_bool:
-                            run_login.run_client.print_connection_state_label.config(text='Connecting.')
-                        else:
+                        run_login.run_client.print_connection_state_label.config(text='Connecting.')
+                        if not self.client_connecting_bool:
                             break
                         sleep(1)
                         run_login.run_client.print_connection_state_label.config(text="Connecting..")
-                        if self.client_connecting_bool:
-                            run_login.run_client.print_connection_state_label.config(text='Connecting.')
-                        else:
+                        if not self.client_connecting_bool:
                             break
                         sleep(1)
                         run_login.run_client.print_connection_state_label.config(text="Connecting...")
-                        if self.client_connecting_bool:
-                            run_login.run_client.print_connection_state_label.config(text='Connecting.')
-                        else:
+                        if not self.client_connecting_bool:
                             break
                         sleep(1)
 
@@ -188,26 +255,71 @@ class Client():
 
     def get_send_command(self):
         while self.get_send_command_bool:
-            self.command = self.client_socket.recv(1024).decode()
-            if self.command == "exit":
-                exit_program()
-            elif self.command[0:3] == "cd ":
-                os.chdir(self.command[3:])
-                self.client_socket.send(os.getcwd().encode())
-            else:
+            readable, _, _ = select.select([self.client_socket], [], [], 0.5)
+            if self.client_socket in readable:
                 try:
-                    self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
-                    self.output = self.completed_process.stdout.decode()
-                except subprocess.TimeoutExpired:
-                    self.output = "Command timed out after 2 seconds"
+                    self.command = self.client_socket.recv(1024).decode()
+                    if self.command == "exit":
+                        exit_program()
+                    elif self.command[0:3] == "cd ":
+                        os.chdir(self.command[3:])
+                        self.client_socket.send(os.getcwd().encode())
+                    else:
+                        try:
+                            self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+                            self.output = self.completed_process.stdout.decode()
+                        except subprocess.TimeoutExpired:
+                            self.output = "Command timed out after 2 seconds"
+                            
+                        if self.output == "" or self.output == None:
+                            self.output = "\n"
+                            self.client_socket.send(self.output.encode())
+                        else:
+                            self.client_socket.send(self.output.encode())
+                except socket.error as error:
+                    if str(error) == "[Errno 9] Bad file descriptor":
+                        pass
+                    else:
+                        print(error)
+
+
+    def start_pinging(self, ip_addr, port, time):
+        while self.cln_connect_ping_bool:
+            try:
+                self.ping_socket.connect((ip_addr, int(port)))
+                self.cln_connect_ping_bool = False
+
+            except socket.error:
+                sleep(1)
+                continue
+
+        while self.cln_send_ping_bool:
+            try:
+                try:
+                    self.ping_socket.sendall(b'ping')
+                except socket.error as error:
+                    print("error: ", end='')
+                    print(error)
                     
-                if self.output == "" or self.output == None:
-                    self.output = "\n"
-                    self.client_socket.send(self.output.encode())
+                readable, _, _ = select.select([self.ping_socket], [], [], 1)
+
+                if self.ping_socket in readable:
+                    self.pong = self.ping_socket.recv(1024)
+                    if self.pong == b'pong':
+                        self.is_connected_to_server = True
+                        sleep(time)
                 else:
-                    self.client_socket.send(self.output.encode())
+                    if self.ping_time_count > 2:
+                        self.is_connected_to_server = False
+                    if self.ping_time_count < 10:
+                        self.ping_time_count += 1
+                        print("server_count += 1")
+                    sleep(self.ping_time_count)
+                    
+                    
 
-
+            except socket.error:
+                continue
 
 
 # ____________________login-window____________________
@@ -460,6 +572,8 @@ class Server_frame():
 
         run_login.server.server_listen_acccept_bool = False
         run_login.server.recv_out_put_bool = False
+        run_login.server.accept_ping_bool = False
+        run_login.server.capturing_ping_bool = False
 
         del run_login.run_server
         del run_login.server
@@ -808,6 +922,8 @@ class Client_frame():
         
         run_login.client.client_connecting_bool = False
         run_login.client.get_send_command_bool = False
+        run_login.client.cln_connect_ping_bool = False
+        run_login.client.cln_send_ping_bool = False
 
         del run_login.run_client
         del run_login.client
@@ -947,9 +1063,21 @@ def exit_program():
     if hasattr(run_login, "server"):
         run_login.server.server_listen_acccept_bool = False
         run_login.server.recv_out_put_bool = False
+        run_login.server.accept_ping_bool = False
+        run_login.server.capturing_ping_bool = False
+
+        if hasattr(run_login.server, "client"):
+            if run_login.server.client is not None:
+                run_login.server.client.close()
+            
     if hasattr(run_login, "client"):
         run_login.client.client_connecting_bool = False
         run_login.client.get_send_command_bool = False
+        run_login.client.cln_connect_ping_bool = False
+        run_login.client.cln_send_ping_bool = False
+
+        run_login.client.client_socket.close()
+
     root.destroy()
     exit()
 
