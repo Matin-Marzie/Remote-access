@@ -3,12 +3,10 @@ from tkinter import messagebox
 import socket
 import threading
 from getpass import getuser
-from platform import uname
 from time import sleep
 from time import time
 import subprocess
 import os
-
 import select
 import signal
 import sys
@@ -137,30 +135,21 @@ class Server():
         run_login.run_server.command_entry.delete(0, tk.END)
         if self.cmnd != "":
             if self.cmnd == "clear" or self.cmnd == "cls":
-                run_login.run_server.output_list.clear()
-                destroy_old_frames(run_login.run_server.inner_frame)
-                run_login.run_server.print_output()
+                run_login.run_server.output_list.delete(0, tk.END)
             elif self.client is not None:
                 if self.client.fileno() != -1:
-                    run_login.run_server.output_list.append("------------------------------------------------------------------------------------------------------------------------")
-                    run_login.run_server.output_list.append(f'{self.client_username}:> {self.cmnd}')
+                    run_login.run_server.output_list.insert(tk.END, f'{self.client_username}:> {self.cmnd}')
                     try:
                         self.client.send(self.cmnd.encode())
                     except socket.error as error:
                         print(f"6.{error}")                         
                 else:
                     self.client.close()
-                    run_login.run_server.output_list.append("Oops! Can't send command! Client isn't connected!")
-                    destroy_old_frames(run_login.run_server.inner_frame)
-                    run_login.run_server.print_output()
+                    run_login.run_server.output_list.insert(tk.END, "Oops! Can't send command! Client isn't connected!")
             else:
-                run_login.run_server.output_list.append("Oops! Client isn't connected yet")
-                destroy_old_frames(run_login.run_server.inner_frame)
-                run_login.run_server.print_output()
+                run_login.run_server.output_list.insert(tk.END, "Oops! Client isn't connected yet")
         else:
-            run_login.run_server.output_list.append("Oops! Command can't be Empty!")
-            destroy_old_frames(run_login.run_server.inner_frame)
-            run_login.run_server.print_output()
+            run_login.run_server.output_list.insert(tk.END, "Oops! Command can't be Empty!")
 
         
             
@@ -181,9 +170,10 @@ class Server():
                         self.is_client_connected = False
                         break
                     if self.recv_out_put_bool:
-                        run_login.run_server.output_list.append(self.output)
-                        destroy_old_frames(run_login.run_server.inner_frame)
-                        run_login.run_server.print_output()
+                        self.output_lines = self.output.split('\n')
+                        for self.line in self.output_lines:
+                            run_login.run_server.output_list.insert(tk.END, self.line)
+                        run_login.run_server.output_list.yview(tk.END)
 
             except socket.error as error:
                 if str(error) == "[Errno 9] Bad file descriptor":
@@ -204,8 +194,6 @@ class Client():
     def __init__(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ping_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        self.get_send_command_thread = threading.Thread(target=self.get_send_command, args=())
 
         self.client_windows_username = getuser()
 
@@ -230,6 +218,9 @@ class Client():
                 self.cln_send_ping_bool = True
 
                 self.client_socket.send(self.client_windows_username.encode())
+
+                self.get_send_command_bool = True
+                self.get_send_command_thread = threading.Thread(target=self.get_send_command, args=())
                 self.get_send_command_thread.start()
 
                 run_login.run_client.client_connect_server.config(state='disabled')
@@ -255,7 +246,7 @@ class Client():
                         if not self.client_connecting_bool:
                             break
                         sleep(0.5)
-
+                        continue
                     except:
                         sleep(0.5)
                 else:
@@ -266,63 +257,83 @@ class Client():
                     self.ping_socket.sendall(b'ping')
                 except socket.error as error:
                     if str(error) == "[Errno 32] Broken pipe":
+                        try:
+                            self.ping_socket.shutdown(socket.SHUT_RDWR)
+                        except:
+                            pass
                         self.ping_socket.close()
                         self.client_socket.close()
                         root.configure(background='red')
                         self.is_connected_to_server = False
+                        self.is_client_connecting = True
+                        self.get_send_command_bool = False
+                        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        self.ping_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        run_login.run_client.cln_connect_page()
                         break
                     
-                readable, _, _ = select.select([self.ping_socket], [], [], 1)
+                if self.ping_socket.fileno() != -1:
+                    readable, _, _ = select.select([self.ping_socket], [], [], 1)
 
-                if self.ping_socket in readable:
-                    if self.ping_socket.fileno() != -1:
-                        self.pong = self.ping_socket.recv(1024)
-                        if self.pong == b'pong':
-                            self.is_connected_to_server = True
-                            sleep(time)
-                    else:
-                        self.ping_socket.close()
-                        self.client_socket.close()
-                        root.configure(background='red')
-                        self.is_connected_to_server = False
-                        break
-            
-                    
+                    if self.ping_socket in readable:
+                        if self.ping_socket.fileno() != -1:
+                            try:
+                                self.pong = self.ping_socket.recv(1024)
+                                if self.pong == b'pong':
+                                    self.is_connected_to_server = True
+                                    sleep(time)
+                            except:
+                                continue
 
     def get_send_command(self):
         while self.get_send_command_bool:
-            readable, _, _ = select.select([self.client_socket], [], [], 0.5)
-            if self.client_socket in readable:
-                try:
-                    self.command = self.client_socket.recv(1024).decode()
-                    if self.command == "exit":
-                        pid = os.getpid()
-                        os.kill(pid, signal.SIGTERM)
-                        exit_program()
-                    elif self.command[0:3] == "cd ":
-                        os.chdir(self.command[3:])
-                        self.client_socket.send(os.getcwd().encode())
-                    else:
-                        try:
-                            self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
-                            self.output = self.completed_process.stdout.decode()
-                        except subprocess.TimeoutExpired:
-                            self.output = "Command timed out after 2 seconds"
-                            
-                        if self.output == "" or self.output == None:
-                            self.output = "\n"
-                            self.client_socket.send(self.output.encode())
+            if self.client_socket.fileno() != -1:
+                readable, _, _ = select.select([self.client_socket], [], [], 0.5)
+                if self.client_socket in readable:
+                    try:
+                        self.command = self.client_socket.recv(1024).decode()
+                        if self.command == "exit":
+                            pid = os.getpid()
+                            os.kill(pid, signal.SIGTERM)
+                            exit_program()
+                        elif self.command[0:3] == "cd ":
+                            os.chdir(self.command[3:])
+                            self.client_socket.send(os.getcwd().encode())
+                        elif self.command[0:8] == "showfile":
+                            self.file_name = self.command[9:]
+                            self.file_directory = f"{os.getcwd()}/{self.file_name}"
+                            try:
+                                with open(self.file_directory, 'rb') as file:
+                                    self.data = file.read()
+                            except:
+                                self.client_socket.send("couldn't open the file!".encode())
+                            try:
+                                self.client_socket.sendall(self.data)
+                            except:
+                                print("coudn't send the file!")
                         else:
-                            self.client_socket.send(self.output.encode())
-                except socket.error as error:
-                    if str(error) == "[Errno 9] Bad file descriptor":
-                        continue
-                    if str(error) == "[Errno 32] Broken pipe":
-                        self.client_socket.close()
-                    else:
-                        print(f'5.{error}')
-
-
+                            try:
+                                self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+                                self.output = self.completed_process.stdout.decode()
+                            except subprocess.TimeoutExpired:
+                                self.output = "Command timed out after 2 seconds"
+                                
+                            if self.output == "" or self.output == None:
+                                self.output = "\n"
+                                self.client_socket.send(self.output.encode())
+                            else:
+                                self.client_socket.send(self.output.encode())
+                    except socket.error as error:
+                        if str(error) == "[Errno 9] Bad file descriptor":
+                            continue
+                        if str(error) == "[Errno 32] Broken pipe":
+                            root.configure(background='red')
+                            break
+                        else:
+                            print(f'5.{error}')
+            else:
+                root.configure(background='red')
+                break
 
 # ____________________login-window____________________
 class Login_frame():
@@ -338,7 +349,7 @@ class Login_frame():
         
         # The Frame
         self.login_frame = tk.Frame(self.window)
-
+        root.configure(background='red')
         
         
         # The Content
@@ -402,7 +413,6 @@ class Server_frame():
     def __init__(self, window):
 
         destroy_old_frames(window)
-        self.output_list = []
 
         # --------------------Frames--------------------
         self.options_frame = tk.Frame(window)               # Left bar
@@ -514,47 +524,12 @@ class Server_frame():
         self.addr_0_label.pack(side='left', fill='both')
         self.addr_1_label.pack(side='right', fill='both')
 
-
-        # ----------Notification----------
-        self.right_bar_notification_frame = tk.Frame(self.right_frame)
-
-        self.right_bar_notification_frame.place(x=5, y=290)
-        self.right_bar_notification_frame.pack_propagate(False)
-        self.right_bar_notification_frame.configure(width=290, height=300)
-
-        self.right_bar_notification_label = tk.Label(self.right_bar_notification_frame,
-                                                     font=(font_name, 15),
-                                                     text='Notifications',
-                                                     padx=0, pady=10
-                                                     )
-        self.right_bar_notification_label.pack(side='top')
-
-        self.right_bar_notification_inner_frame = tk.Frame(self.right_bar_notification_frame)
-        self.right_bar_notification_inner_frame.pack()
-        
-        self.right_bar_notification_msg = tk.Text(self.right_bar_notification_inner_frame,
-                                                  font=(font_name),
-                                                  width=27, height=13,
-                                                  background='#e6e6e6'
-                                                  )
-        self.right_bar_notification_scrollbar = tk.Scrollbar(self.right_bar_notification_inner_frame,
-                                                             orient='vertical',
-                                                             command=self.right_bar_notification_msg.yview
-                                                             )
-        self.right_bar_notification_msg.configure(yscrollcommand=self.right_bar_notification_scrollbar.set)
-        self.right_bar_notification_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-    
-        self.right_bar_notification_msg.insert('end', 'hello world this is john smith and i am learning python')
-        self.right_bar_notification_msg.pack(side=tk.LEFT, fill='both', expand=True)
-
-
         # ----------voice chat----------
         self.right_bar_voice_frame = tk.Frame(self.right_frame)
 
-        self.right_bar_voice_frame.place(x=5, y=595)
+        self.right_bar_voice_frame.place(x=5, y=290)
         self.right_bar_voice_frame.pack_propagate(False)
-        self.right_bar_voice_frame.configure(width=290, height=280)
+        self.right_bar_voice_frame.configure(width=290, height=585)
 
         self.right_bar_voice_chat_label = tk.Label(self.right_bar_voice_frame,
                                                    font=(font_name, 15),
@@ -674,7 +649,16 @@ class Server_frame():
     # ----------Command Line page----------
     def command_page(self):
         self.indicate(self.command_btn)
-        self.out_put_frame = tk.Frame(self.main_frame)
+
+        self.command_frame = tk.Frame(self.main_frame)
+        self.command_frame.place(x=5, y=5)
+        self.command_frame.pack_propagate(True)
+        self.command_frame.configure(width=950, height=870)
+
+        self.output_frame = tk.Frame(self.command_frame)
+        self.output_frame.place(x=50, y=50)
+        self.output_frame.pack_propagate(False)
+        self.output_frame.configure(width=860, height=670, background='black')
 
         self.output_label = tk.Label(self.main_frame,
                                      text="Output:",
@@ -682,37 +666,22 @@ class Server_frame():
                                      )
         self.output_label.place(x=50, y=20)
         
-        # ----------------------------------------scrollbar canvas----------------------------------------
-        self.out_put_frame.place(x=50, y=50)
-        self.out_put_frame.pack_propagate(False)
-        self.out_put_frame.configure(width=860, height=670, background='black')
+        # ----------------------------------------Listbox scrollbar----------------------------------------
 
-        self.canvas = tk.Canvas(self.out_put_frame, background='black')
-        self.canvas.pack(fill="both", expand=True)
+        self.output_list = tk.Listbox(self.output_frame,
+                                      font=(font_name, 20),
+                                      bg='black',
+                                      fg='green'
+                                      )
+        self.scrollbar = tk.Scrollbar(self.output_frame)
+        self.scrollbar.pack(side=tk.RIGHT, fill='both')
+        self.output_list.pack(side='left',expand=True, fill='both')
 
-        self.y_scrollbar = tk.Scrollbar(self.out_put_frame, orient='vertical', command=self.canvas.yview, width=15)
-        self.y_scrollbar.pack(side='right', fill='y')
-        self.x_scrollbar = tk.Scrollbar(self.out_put_frame, orient='horizontal', command=self.canvas.xview, width=15)
-        self.x_scrollbar.pack(side='bottom', fill='x')
+        self.output_list.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.config(command=self.output_list.yview)
 
-        self.canvas.configure(xscrollcommand=self.x_scrollbar.set, yscrollcommand=self.y_scrollbar.set)
-
-        self.inner_frame = tk.Frame(self.canvas, background='black')
-
-        self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
-
-        def on_canvas_resize(event):
-            self.canvas.configure(scrollregion=self.canvas.bbox('all'))
-        self.canvas.bind("<Configure>", on_canvas_resize)
-
-        def on_inner_frame_resize(event):
-            self.canvas.itemconfigure(inner_frame_window, width=event.width)
-        self.inner_frame.bind("configure>", on_inner_frame_resize)
-        inner_frame_window = self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
         # --------------------------------------------------------------------------------------------------
 
-        destroy_old_frames(run_login.run_server.inner_frame)
-        self.print_output()
 
         self.print_new_command_label = tk.Label(self.main_frame,
                                                 text='New Command:',
@@ -722,7 +691,7 @@ class Server_frame():
                                       font=(font_name, 20),
                                       fg='green',
                                       bg='black',
-                                      width=57,
+                                      width=50,
                                       )
         self.send = tk.Button(self.main_frame,
                               text="Send",
@@ -815,18 +784,6 @@ class Server_frame():
             self.listening_thread = threading.Thread(target=run_login.server.capture_ping, args=(self.server_ip, self.server_port))
             self.listening_thread.start()
 
-
-    def print_output(self):
-        for i in self.output_list:
-            self.print_output_label = tk.Label(self.inner_frame,
-                                        text=i,
-                                        font=(font_name, 20),
-                                        fg='green',
-                                        bg='black',
-                                        anchor='nw',
-                                        justify='left'
-                                        )
-            self.print_output_label.pack(fill='both', expand=True)
 
 
 
@@ -1073,6 +1030,11 @@ def exit_program():
 
         if hasattr(run_login.server, "client_ping"):
             if run_login.server.client_ping is not None:
+                try:
+                    run_login.server.ping_socket.shutdown(socket.SHUT_RDWR)
+                    run_login.server.server_socket.shutdown(socket.SHUT_RDWR)
+                except:
+                    pass
                 run_login.server.client_ping.close()
                 run_login.server.client.close()
             
@@ -1081,6 +1043,11 @@ def exit_program():
         run_login.client.cln_send_ping_bool = False
         run_login.client.get_send_command_bool = False
 
+        try:
+            run_login.client.ping_socket.shutdown(socket.SHUT_RDWR)
+            run_login.client.client_socket.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
         run_login.client.ping_socket.close()
         run_login.client.client_socket.close()
 
