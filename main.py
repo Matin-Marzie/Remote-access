@@ -8,7 +8,10 @@ from time import sleep
 from time import time
 import subprocess
 import os
+
 import select
+import signal
+import sys
 
 # All the buttons colors:
 button_color = '#85d5fb'
@@ -25,7 +28,6 @@ class Server():
         # This socket is for creating connection with client, after the connection, all the commands of the Command Line will be send with this socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ping_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.voice_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
         # We stop the threads using boolean variables, indeed we break the loop of the function  
@@ -33,101 +35,144 @@ class Server():
         self.is_server_listening = False
 
         self.recv_out_put_bool = True
-        self.server_listen_acccept_bool = True
+        self.accept_client_bool = True
+        self.capture_ping_bool = True
 
-        self.accept_ping_bool = True
-        self.capturing_ping_bool = True
+        self.client_ping = None
+        self.client = None
 
 
-    
-    # This function checks if we can start a server on given ip address and port, if yes we start listening
-    def server_listen_accept(self, ip_addr, port):
+
+    def capture_ping(self, ip_addr, port):
+
         try:
-            self.server_socket.bind((ip_addr, int(port)))
+            self.ping_socket.bind((ip_addr, (int(port))))
+            self.ping_socket.listen(1)
+
+            self.server_socket.bind((ip_addr, (int(port)+1) ))
             self.server_socket.listen(1)
-            run_login.run_server.listen_btn.config(state='disabled')
-            run_login.run_server.print_server_connection_state.config(text='Listening...')
-            if run_login.run_server.socket_error.winfo_exists():
-                run_login.run_server.socket_error.destroy()
-            self.is_server_listening = True
 
-            while self.server_listen_acccept_bool:
-                try:
-                    readable, _, _ = select.select([self.server_socket], [], [], 0.5)
-
-                    if self.server_socket in readable:
-                        self.client, self.addr = self.server_socket.accept()
-
-                        self.client_username = self.client.recv(1024).decode()
-                        run_login.run_server.right_bar_client_label.config(text=self.client_username)
-
-                        root.configure(background='green')
-
-                        run_login.run_server.command_page()
-
-                        self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
-                        self.recv_out_put_thread.start()
-
-                        self.is_server_listening = False
-                        self.server_listen_accept_bool = False
-
-                        self.capture_ping_thread = threading.Thread(target=self.capture_ping ,args=(ip_addr, (int(port)+1), time()))
-                        self.capture_ping_thread.start()
-
-
-                        # After the connection, the user page will be chaged automaticlly to command Line page
-                        
-                        run_login.run_server.addr_0_label.config(text=self.addr[0])
-                        run_login.run_server.addr_1_label.config(text=self.addr[1])
-                        
-                        # After the connection, first we receive the client username
-
-
-                        # After connection, we change the background color from "red" to "green"
-
-                except socket.error as error:
-                    self.server_socket.close()
-
-            
-
+            self.accept_client_bool = True
         # If we can't creat server and start listening, we show to the user the reason(error)
         except socket.error as error:
             if str(error) == "[Errno 98] Address already in use":
                 run_login.run_server.print_server_connection_state.config(text="Use an other port and Try again!")
+            else:
+                run_login.run_server.socket_error.pack()
+                run_login.run_server.socket_error.config(text=error)
 
-            run_login.run_server.socket_error.pack()
-            run_login.run_server.socket_error.config(text=error)
+            self.accept_client_bool = False
 
-        
+        if self.accept_client_bool:
+            run_login.run_server.listen_btn.config(state='disabled')
+            run_login.run_server.print_server_connection_state.config(text='Listening...')
+            if run_login.run_server.socket_error.winfo_exists():
+                run_login.run_server.socket_error.destroy()
+
+        while self.accept_client_bool:
+            read, _, _ = select.select([self.ping_socket], [], [], 0.5)
+            if self.ping_socket in read:
+                self.client_ping, self.addr_ping = self.ping_socket.accept()
+                self.client, self.addr = self.server_socket.accept()
+                print("1.Clients connected!")
+
+                root.configure(background='green')
+
+                run_login.run_server.command_page()
+
+                self.client_username = self.client.recv(1024).decode()
+                run_login.run_server.right_bar_client_label.config(text=self.client_username)
+                run_login.run_server.addr_0_label.config(text=self.addr[0])
+                run_login.run_server.addr_1_label.config(text=self.addr[1])
+
+                self.is_server_listening = False
+                self.is_client_connected = True
+
+                self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
+                self.recv_out_put_thread.start()
+                
+                started_time = time()
+            else:
+                continue
+            while self.capture_ping_bool:
+                readable, _, _ = select.select([self.client_ping], [], [], 1)
+                if self.client_ping in readable:
+                    try:
+                        self.ping = self.client_ping.recv(1024)
+                    except socket.error as e:
+                        if str(e) == "[Errno 9] Bad file descriptor":
+                            continue
+
+
+                    if self.ping == b'ping':
+                        self.client_ping.sendall(b'pong')
+                        self.is_client_connected = True
+                        root.configure(background='green')
+                        started_time = time()
+
+                    elif(int(time() - started_time)) > 5:
+                        self.client_ping.close()
+                        self.client.close()
+                        print("44.clients closed!")
+                        self.client_ping = None
+                        self.is_server_listening = True
+                        self.is_client_connected = False
+                        run_login.run_server.addr_0_label.config(text="")
+                        run_login.run_server.addr_1_label.config(text="")
+                        run_login.run_server.right_bar_client_label.config(text="Disconnected!")
+
+                        break
+
+                    elif(int(time() - started_time)) > 2:
+                        root.configure(background='red')
+                        self.is_server_listening = True
+
+                    else:
+                        pass
+
         
     # Whith this fuction we send our command to the client
     def send_command(self):
         self.cmnd = run_login.run_server.command_entry.get()
         run_login.run_server.command_entry.delete(0, tk.END)
-        if self.is_client_connected:
-            if self.cmnd != "":
-                if self.cmnd == "clear" or self.cmnd == "cls":
-                    run_login.run_server.output_list.clear()
-                    destroy_old_frames(run_login.run_server.inner_frame)
-                    run_login.run_server.print_output()
-                else:
+        if self.cmnd != "":
+            if self.cmnd == "clear" or self.cmnd == "cls":
+                run_login.run_server.output_list.clear()
+                destroy_old_frames(run_login.run_server.inner_frame)
+                run_login.run_server.print_output()
+            elif self.client is not None:
+                if self.client.fileno() != -1:
                     run_login.run_server.output_list.append("------------------------------------------------------------------------------------------------------------------------")
                     run_login.run_server.output_list.append(f'{self.client_username}:> {self.cmnd}')
                     try:
                         self.client.send(self.cmnd.encode())
-                    except:
-                        run_login.run_server.output_list.append("Oops! Can't send command! Client isn't connected!")
-                        destroy_old_frames(run_login.run_server.inner_frame)
-                        run_login.run_server.print_output()
+                    except socket.error as error:
+                        print(f"6.{error}")                         
+                else:
+                    self.client.close()
+                    run_login.run_server.output_list.append("Oops! Can't send command! Client isn't connected!")
+                    destroy_old_frames(run_login.run_server.inner_frame)
+                    run_login.run_server.print_output()
             else:
-                run_login.run_server.output_list.append("Oops! Command can't be Empty!")
+                run_login.run_server.output_list.append("Oops! Client isn't connected yet")
                 destroy_old_frames(run_login.run_server.inner_frame)
                 run_login.run_server.print_output()
+        else:
+            run_login.run_server.output_list.append("Oops! Command can't be Empty!")
+            destroy_old_frames(run_login.run_server.inner_frame)
+            run_login.run_server.print_output()
+
+        
+            
+            
         
 
     def recv_out_put(self):
         while self.recv_out_put_bool:
             try:
+                if self.client.fileno() == -1:
+                    self.client.close()
+                    continue
                 read, _, _ = select.select([self.client], [], [], 0.5)
                 if self.client in read:
                     self.output = self.client.recv(1024).decode()
@@ -143,45 +188,14 @@ class Server():
             except socket.error as error:
                 if str(error) == "[Errno 9] Bad file descriptor":
                     pass
+                elif str(error) == "[Errno 32] Broken pipe":
+                    self.client.close()
                 else:
-                    print(error)
+                    print(f'3.{error}')
                     break
             
 
-    def capture_ping(self, ip_addr, port, started_time):
-        try:
-            self.ping_socket.bind((ip_addr, int(port)))
-            self.ping_socket.listen(1)
 
-            while self.accept_ping_bool:
-                self.client_ping, self.addr_ping = self.ping_socket.accept()
-                break
-
-
-            while self.capturing_ping_bool:
-                try:
-                    readable, _, _ = select.select([self.client_ping], [], [], 1)
-                    if self.client_ping in readable:
-                        self.ping = self.client_ping.recv(1024)
-                        if self.ping == b'ping':
-                            self.client_ping.sendall(b'pong')
-                            self.is_client_connected = True
-                            started_time = time()
-                    else:
-                        if (time() - started_time) > 9:
-                            sleep(1)
-                            print(time() - started_time)
-                            self.is_client_connected = False
-
-
-                except socket.error as error:
-                    print(error)
-                    sleep(1)
-
-
-        except socket.error as error:
-            sleep(1)
-            print(error)
 
 
 # ____________________client-socket____________________
@@ -197,24 +211,29 @@ class Client():
 
         self.is_client_connecting = False
         self.is_connected_to_server = False
-        self.ping_time_count = 0
 
         self.client_connecting_bool = True
+        self.cln_send_ping_bool = False
         self.get_send_command_bool = True
-        self.cln_connect_ping_bool = True
-        self.cln_send_ping_bool = True
 
-
-    def client_connect(self, ip_addr, port):
+    def client_connect(self, ip_addr, port, time=3):
         self.is_client_connecting = True
 
         while self.client_connecting_bool:
             try:
-                self.client_socket.connect((str(ip_addr), int(port)))
-                self.start_pinging_thread = threading.Thread(target=self.start_pinging, args=(ip_addr, (int(port)+1), 3 ))
-                self.start_pinging_thread.start()
+                self.ping_socket.connect((ip_addr, int(port)))
+                self.client_socket.connect((ip_addr, (int(port)+1 )))
+                print("1.sockets connected")
+
                 self.is_connected_to_server = True
-                self.client_connecting_bool = False
+                self.is_client_connecting = False
+                self.cln_send_ping_bool = True
+
+                self.client_socket.send(self.client_windows_username.encode())
+                self.get_send_command_thread.start()
+
+                run_login.run_client.client_connect_server.config(state='disabled')
+                root.configure(background='green')
 
             except socket.error as error:
 
@@ -223,35 +242,52 @@ class Client():
                         run_login.run_client.print_connection_state_label.config(text='Connecting')
                         if not self.client_connecting_bool:
                             break
-                        sleep(1)
+                        sleep(0.5)
                         run_login.run_client.print_connection_state_label.config(text='Connecting.')
                         if not self.client_connecting_bool:
                             break
-                        sleep(1)
+                        sleep(0.5)
                         run_login.run_client.print_connection_state_label.config(text="Connecting..")
                         if not self.client_connecting_bool:
                             break
-                        sleep(1)
+                        sleep(0.5)
                         run_login.run_client.print_connection_state_label.config(text="Connecting...")
                         if not self.client_connecting_bool:
                             break
-                        sleep(1)
+                        sleep(0.5)
 
                     except:
-                        sleep(1)
+                        sleep(0.5)
                 else:
                     run_login.run_client.print_connection_state_label.config(text=error)
 
+            while self.cln_send_ping_bool:
+                try:
+                    self.ping_socket.sendall(b'ping')
+                except socket.error as error:
+                    if str(error) == "[Errno 32] Broken pipe":
+                        self.ping_socket.close()
+                        self.client_socket.close()
+                        root.configure(background='red')
+                        self.is_connected_to_server = False
+                        break
                     
-        if self.is_connected_to_server:
-            self.client_socket.send(self.client_windows_username.encode())
-            self.get_send_command_thread.start()
+                readable, _, _ = select.select([self.ping_socket], [], [], 1)
 
-            run_login.run_client.client_connect_server.config(state='disabled')
-            root.configure(background='green')
-
-        self.is_client_connecting = False
-                
+                if self.ping_socket in readable:
+                    if self.ping_socket.fileno() != -1:
+                        self.pong = self.ping_socket.recv(1024)
+                        if self.pong == b'pong':
+                            self.is_connected_to_server = True
+                            sleep(time)
+                    else:
+                        self.ping_socket.close()
+                        self.client_socket.close()
+                        root.configure(background='red')
+                        self.is_connected_to_server = False
+                        break
+            
+                    
 
     def get_send_command(self):
         while self.get_send_command_bool:
@@ -260,6 +296,8 @@ class Client():
                 try:
                     self.command = self.client_socket.recv(1024).decode()
                     if self.command == "exit":
+                        pid = os.getpid()
+                        os.kill(pid, signal.SIGTERM)
                         exit_program()
                     elif self.command[0:3] == "cd ":
                         os.chdir(self.command[3:])
@@ -278,48 +316,12 @@ class Client():
                             self.client_socket.send(self.output.encode())
                 except socket.error as error:
                     if str(error) == "[Errno 9] Bad file descriptor":
-                        pass
+                        continue
+                    if str(error) == "[Errno 32] Broken pipe":
+                        self.client_socket.close()
                     else:
-                        print(error)
+                        print(f'5.{error}')
 
-
-    def start_pinging(self, ip_addr, port, time):
-        while self.cln_connect_ping_bool:
-            try:
-                self.ping_socket.connect((ip_addr, int(port)))
-                self.cln_connect_ping_bool = False
-
-            except socket.error:
-                sleep(1)
-                continue
-
-        while self.cln_send_ping_bool:
-            try:
-                try:
-                    self.ping_socket.sendall(b'ping')
-                except socket.error as error:
-                    print("error: ", end='')
-                    print(error)
-                    
-                readable, _, _ = select.select([self.ping_socket], [], [], 1)
-
-                if self.ping_socket in readable:
-                    self.pong = self.ping_socket.recv(1024)
-                    if self.pong == b'pong':
-                        self.is_connected_to_server = True
-                        sleep(time)
-                else:
-                    if self.ping_time_count > 2:
-                        self.is_connected_to_server = False
-                    if self.ping_time_count < 10:
-                        self.ping_time_count += 1
-                        print("server_count += 1")
-                    sleep(self.ping_time_count)
-                    
-                    
-
-            except socket.error:
-                continue
 
 
 # ____________________login-window____________________
@@ -400,7 +402,7 @@ class Server_frame():
     def __init__(self, window):
 
         destroy_old_frames(window)
-
+        self.output_list = []
 
         # --------------------Frames--------------------
         self.options_frame = tk.Frame(window)               # Left bar
@@ -570,10 +572,14 @@ class Server_frame():
     # Δεν Δουλεύει και δεν τα κατάφερα ακόμα!
     def choose_user_page(self):
 
-        run_login.server.server_listen_acccept_bool = False
         run_login.server.recv_out_put_bool = False
-        run_login.server.accept_ping_bool = False
-        run_login.server.capturing_ping_bool = False
+        run_login.server.accept_client_bool = False
+        run_login.server.capture_ping_bool = False
+
+        if hasattr(run_login.server, "client_ping"):
+            if run_login.server.client_ping is not None:
+                run_login.server.client_ping.close()
+                run_login.server.client.close()
 
         del run_login.run_server
         del run_login.server
@@ -693,8 +699,6 @@ class Server_frame():
 
         self.inner_frame = tk.Frame(self.canvas, background='black')
 
-        self.output_list = []
-
         self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
 
         def on_canvas_resize(event):
@@ -706,6 +710,9 @@ class Server_frame():
         self.inner_frame.bind("configure>", on_inner_frame_resize)
         inner_frame_window = self.canvas.create_window((0,0), window=self.inner_frame, anchor='nw')
         # --------------------------------------------------------------------------------------------------
+
+        destroy_old_frames(run_login.run_server.inner_frame)
+        self.print_output()
 
         self.print_new_command_label = tk.Label(self.main_frame,
                                                 text='New Command:',
@@ -805,7 +812,7 @@ class Server_frame():
             run_login.run_server.error_label.pack()
         else:
             run_login.run_server.error_label.destroy()
-            self.listening_thread = threading.Thread(target=run_login.server.server_listen_accept, args=(self.server_ip, self.server_port))
+            self.listening_thread = threading.Thread(target=run_login.server.capture_ping, args=(self.server_ip, self.server_port))
             self.listening_thread.start()
 
 
@@ -922,7 +929,6 @@ class Client_frame():
         
         run_login.client.client_connecting_bool = False
         run_login.client.get_send_command_bool = False
-        run_login.client.cln_connect_ping_bool = False
         run_login.client.cln_send_ping_bool = False
 
         del run_login.run_client
@@ -1061,21 +1067,21 @@ def is_valid_port(port):
 
 def exit_program():
     if hasattr(run_login, "server"):
-        run_login.server.server_listen_acccept_bool = False
         run_login.server.recv_out_put_bool = False
-        run_login.server.accept_ping_bool = False
-        run_login.server.capturing_ping_bool = False
+        run_login.server.accept_client_bool = False
+        run_login.server.capture_ping_bool = False
 
-        if hasattr(run_login.server, "client"):
-            if run_login.server.client is not None:
+        if hasattr(run_login.server, "client_ping"):
+            if run_login.server.client_ping is not None:
+                run_login.server.client_ping.close()
                 run_login.server.client.close()
             
     if hasattr(run_login, "client"):
         run_login.client.client_connecting_bool = False
-        run_login.client.get_send_command_bool = False
-        run_login.client.cln_connect_ping_bool = False
         run_login.client.cln_send_ping_bool = False
+        run_login.client.get_send_command_bool = False
 
+        run_login.client.ping_socket.close()
         run_login.client.client_socket.close()
 
     root.destroy()
@@ -1089,12 +1095,23 @@ def x():
 #__________________________________________________
 
 
+
+# if sys.platform.startswith('win'):
+#     # hide the console window in Windows
+#     startupinfo = subprocess.STARTUPINFO()
+#     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+#     startupinfo.wShowWindow = subprocess.SW_HIDE
+# else:
+#     startupinfo = None
+
+
 # Creating a window
 root = tk.Tk()
 root.geometry("1600x900")
 root.configure(background='red')
 root.title("Matin")
 root.protocol("WM_DELETE_WINDOW", x)
+
 
 # Runnig program 
 run_login = Login_frame(root)
