@@ -10,7 +10,6 @@ import os
 import select
 import signal
 import pyscreenshot
-import pickle
 
 # All the buttons colors:
 button_color = '#85d5fb'
@@ -420,6 +419,11 @@ class Login_frame():
         
     def show(self):
 
+        x_offset = (screen_windth - WIDTH) // 2
+        y_offset = (screen_height - HEIGHT) // 2
+
+        root.geometry("{}x{}+{}+{}".format(WIDTH, HEIGHT, x_offset, y_offset))
+        
         destroy_old_frames(self.window)
         
         # The Frame
@@ -439,7 +443,7 @@ class Login_frame():
                                     font=(font_name),
                                     bg=button_color,
                                     fg='black',
-                                    width=90,height=2,
+                                    width=70,height=2,
                                     command=self.choosen_server
                                     )
         self.client_btn = tk.Button(self.login_frame,
@@ -447,17 +451,17 @@ class Login_frame():
                                     font=(font_name),
                                     bg=button_color,
                                     fg='black',
-                                    width=90,height=2,
+                                    width=70,height=2,
                                     command=self.choosen_client
                                     )
 
         self.login_frame.place(x=10, y=10)
         self.login_frame.pack_propagate(False)
-        self.login_frame.configure(width=1580, height=880, background='white')
+        self.login_frame.configure(width=780, height=580, background='white')
         # Appending our content
-        self.choose_label.place(x=715, y=310)
-        self.server_btn.place(x=320, y=520)
-        self.client_btn.place(x=320, y=570)
+        self.choose_label.place(x=315, y=210)
+        self.server_btn.place(x=30, y=320)
+        self.client_btn.place(x=30, y=372)
         
 
     # if user chooses server
@@ -486,6 +490,11 @@ class Login_frame():
 # ____________________server-window____________________
 class Server_frame():
     def __init__(self, window):
+        
+        window_width = 1600
+        window_height = 900
+
+        root.geometry(f"{window_width}x{window_height}+{(screen_windth - window_width)//2}+{(screen_height - window_height)//2}")
 
         destroy_old_frames(window)
 
@@ -535,22 +544,6 @@ class Server_frame():
                                      pady=1,anchor="n",
                                      command=lambda: (self.command_page())
                                      )
-        self.file_transfer_btn = tk.Button(self.options_frame,
-                                       text='Transfer',
-                                       font=(font_name, 25),
-                                       bg=button_color,
-                                       padx=20,width=10,height=1,
-                                       pady=1,anchor="n",
-                                       command=lambda: (self.file_transfer_page())
-                                       )
-        self.setting_btn = tk.Button(self.options_frame,
-                                     text='Setting',
-                                     font=(font_name, 25),
-                                     bg=button_color,
-                                     padx=20,width=10,height=1,
-                                     pady=1,anchor="n",
-                                     command=lambda: (self.setting_page())
-                                     )
         self.help_btn = tk.Button(self.options_frame,
                                   text='Help',
                                   font=(font_name, 25),
@@ -561,12 +554,10 @@ class Server_frame():
                                   )
 
         # Showing the Options bar
-        self.choose_user_btn.place(x=10, y=50)
-        self.connect_btn.place(x=10, y=130)
-        self.command_btn.place(x=10, y=210)
-        self.file_transfer_btn.place(x=10,y=290)
-        self.setting_btn.place(x=10, y=370)
-        self.help_btn.place(x=10, y=450)
+        self.choose_user_btn.place(x=22, y=50)
+        self.connect_btn.place(x=22, y=130)
+        self.command_btn.place(x=22, y=210)
+        self.help_btn.place(x=22, y=290)
 
 
         # --------------------right bar--------------------
@@ -749,6 +740,7 @@ class Server_frame():
                                       fg='green'
                                       )
         self.scrollbar = tk.Scrollbar(self.output_frame)
+
         self.scrollbar.pack(side=tk.RIGHT, fill='both')
         self.output_list.pack(side='left',expand=True, fill='both')
 
@@ -777,34 +769,6 @@ class Server_frame():
         self.command_entry.place(x=50, y=760)
         self.send.place(x=450, y=825)
 
-
-    # ----------Transfer page----------
-    def file_transfer_page(self):
-        self.indicate(self.file_transfer_btn)
-        self.file_transfer_frame = tk.Frame(self.main_frame)
-
-        self.file_transfer_frame.place(x=0, y=0)
-        self.file_transfer_frame.pack_propagate(False)
-        self.file_transfer_frame.configure(width=960, height=880)
-
-        # θα γράψουμε μετά
-
-        self.rtfm_label = tk.Label(self.main_frame, text='RTFM', font=(5))
-        self.rtfm_label.place(x=450, y=300)
-
-
-    # ----------Setting page----------
-    def setting_page(self):
-        self.indicate(self.setting_btn)
-        self.setting_frame = tk.Frame(self.main_frame)
-
-        self.setting_frame.place(x=0, y=0)
-        self.setting_frame.pack_propagate(False)
-        self.setting_frame.configure(width=960, height=880)
-
-        # θα γράψουμε μετά
-
-
     # ----------Help page----------
     def help_page(self):
         self.indicate(self.help_btn)
@@ -831,8 +795,6 @@ class Server_frame():
         self.choose_user_btn.config(bg=button_color)
         self.connect_btn.config(bg=button_color)
         self.command_btn.config(bg=button_color)
-        self.file_transfer_btn.config(bg=button_color)
-        self.setting_btn.config(bg=button_color)
         self.help_btn.config(bg=button_color)
 
 
@@ -869,6 +831,11 @@ class Server_frame():
 class Client_frame():
     def __init__(self, window):
 
+        x_offset = (screen_windth - WIDTH) // 2
+        y_offset = (screen_height - HEIGHT) // 2
+
+        root.geometry("{}x{}+{}+{}".format(WIDTH, HEIGHT, x_offset, y_offset))
+
         destroy_old_frames(window)
 
         # Frames
@@ -879,19 +846,19 @@ class Client_frame():
         # Showing the Frames
         self.cln_options_frame.place(x=10, y=10)
         self.cln_options_frame.pack_propagate(False)
-        self.cln_options_frame.configure(width=300, height=880, background='white')
+        self.cln_options_frame.configure(width=780, height=55)
 
-        self.cln_main_frame.place(x=320, y=10)
+        self.cln_main_frame.place(x=10, y=75)
         self.cln_main_frame.pack_propagate(False)
-        self.cln_main_frame.configure(width=960, height=880)
+        self.cln_main_frame.configure(width=540, height=515)
 
-        self.cln_right_frame.place(x=1290, y=10)
+        self.cln_right_frame.place(x=560, y=75)
         self.cln_right_frame.pack_propagate(False)
-        self.cln_right_frame.configure(width=300, height=880, background='white')
+        self.cln_right_frame.configure(width=230, height=515)
 
 
-        # ----------options bar(left bar)----------
-        self.cln_choose_user_btn = tk.Button(window,
+        # ----------Options-bar(left bar)----------
+        self.cln_choose_user_btn = tk.Button(self.cln_options_frame,
                                        text='Back',
                                        font=(font_name, 25),
                                        bg=button_color,
@@ -900,7 +867,7 @@ class Client_frame():
                                        anchor="n",
                                        command=lambda: self.cln_choose_user_page()
                                        )
-        self.cln_connect_btn = tk.Button(window,
+        self.cln_connect_btn = tk.Button(self.cln_options_frame,
                                      text='Connect',
                                      font=(font_name, 25),
                                      bg=button_color,
@@ -909,7 +876,7 @@ class Client_frame():
                                      anchor="n",
                                      command=lambda: self.cln_connect_page()
                                      )
-        self.cln_help_btn = tk.Button(window,
+        self.cln_help_btn = tk.Button(self.cln_options_frame,
                                   text='Help',
                                   font=(font_name, 25),
                                   bg=button_color,
@@ -920,12 +887,19 @@ class Client_frame():
                                   )
         
         
+        self.cln_choose_user_btn.place(x=5, y=5)
+        self.cln_connect_btn.place(x=262, y=5)
+        self.cln_help_btn.place(x=520, y=5)
 
-        self.cln_choose_user_btn.place(x=20, y=50)
-        self.cln_connect_btn.place(x=20, y=130)
-        self.cln_help_btn.place(x=20, y=210)
 
+    # --------------------Voice-chat-bar--------------------
+        self.voice_chat_label = tk.Label(self.cln_right_frame,
+                                         text='Voice Chat',
+                                         font=(font_name, 15)
+                                         )
+        self.voice_chat_label.pack(side='top')
 
+    # --------------------Functions-------------------------
     def hide_indicator(self):
         self.cln_choose_user_btn.config(bg=button_color)
         self.cln_connect_btn.config(bg=button_color)
@@ -1031,7 +1005,7 @@ class Client_frame():
             run_login.run_client.client_ip_addr_entry.insert(0, run_login.run_client.client_ip)
             run_login.run_client.client_port_entry.insert(0, run_login.run_client.client_port)            
             run_login.run_client.client_connect_server.config(state='disabled')
-            run_login.run_client.print_connection_state_label.config(text='Connected!')            
+            run_login.run_client.print_connection_state_label.config(text='Connected!')
         else:
             self.client_ip_addr_entry.insert(0, get_private_ip_address())
             self.client_port_entry.insert(0, 8119)
@@ -1049,9 +1023,29 @@ class Client_frame():
         self.cln_help_frame = tk.Frame(self.cln_main_frame)
         self.cln_help_frame.pack()
 
+        self.help_list = tk.Listbox(self.cln_main_frame,
+                                    font=(font_name, 20),
+                                    fg='black',
+                                    bg='#d9d9d9'
+                                    )
+        self.help_scrollbar = tk.Scrollbar(self.cln_main_frame)
 
+        self.help_scrollbar.pack(side=tk.RIGHT, fill='y')
+        self.help_list.pack(side='left', expand=True, fill='both')
 
+        self.help_list.config(yscrollcommand=self.help_scrollbar.set)
+        self.help_scrollbar.config(command=self.help_list.yview)
 
+        self.help = """                           Manual
+
+AUTHOR
+        Original Manage by <name of the author> <inf2022001@ionio.gr>
+                                        9 May 2023
+        """
+
+        self.help_lines = self.help.split('\n')
+        for line in self.help_lines:
+            self.help_list.insert(tk.END, line)
 
 # ____________________Functions____________________
 
@@ -1139,9 +1133,20 @@ def x():
 
 # Creating a window
 root = tk.Tk()
-root.geometry("1600x900")
+
+screen_windth = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+WIDTH = 800
+HEIGHT = 600
+
+x_offset = (screen_windth - WIDTH) // 2
+y_offset = (screen_height - HEIGHT) // 2
+
+root.geometry("{}x{}+{}+{}".format(WIDTH, HEIGHT, x_offset, y_offset))
+
 root.configure(background='red')
-root.title("Matin")
+root.title("Ionio university of Kerkyra")
 root.protocol("WM_DELETE_WINDOW", x)
 
 
