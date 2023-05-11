@@ -35,7 +35,7 @@ Remote-Access
 
 Mohammad Matin Marzie &emsp; Ισμήνη Γαλανού &emsp;&emsp; Θωμάς Νάκος &emsp; Δανιήλ Αρίσταρχος Παυλίδης
 
-inf2022001@ionio.gr &emsp; inf2022029@ionio.gr &emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
+inf2022001@ionio.gr &emsp;&emsp; inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
 
 
 
