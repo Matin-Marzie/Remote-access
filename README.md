@@ -33,7 +33,7 @@ Remote-Access
 
 **Team Members**
 
-Mohammad Matin Marzie &emsp; Ισμήνη Γαλανού &emsp;&emsp;&emsp;&emsp; Θωμάς Νάκος &emsp;&emsp;&emsp;&emsp;&emsp; Δανιήλ Αρίσταρχος Παυλίδης
+Mohammad Matin Marzie &emsp; Ισμήνη Γαλανού &emsp;&emsp;&emsp;&emsp; Θωμάς Νάκος &emsp;&emsp;&emsp;&emsp;&emsp; Δανιήλ Αρίσταρχος Παυλίδης<br>
 inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
 
 
