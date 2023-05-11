@@ -22,13 +22,6 @@ matin.marzie5148@gmail.com
 inf2022001@ionio.gr
 
 
-
-
-
-
-
-
-
 ## **About Our Project**
 
 ![image](https://github.com/Matin-Marzie/Remote-access/assets/116279956/f2883163-10d5-4d96-aa8a-a33045fdb67e)
@@ -40,8 +33,8 @@ Remote-Access
 
 **Team Members**
 
-Mohammad Matin Marzie     Ισμήνη Γαλανού        Θωμάς Νάκος           Δανιήλ Αρίσταρχος Παυλίδης
-inf2022001@ionio.gr       inf2022029@ionio.gr   inf2022141@ionio.gr   inf2022161@iono.gr
+Mohammad Matin Marzie &#09; Ισμήνη Γαλανού &#09; Θωμάς Νάκος &#09; Δανιήλ Αρίσταρχος Παυλίδης
+inf2022001@ionio.gr &#09; inf2022029@ionio.gr &#09; inf2022141@ionio.gr   inf2022161@iono.gr
 
 
 
