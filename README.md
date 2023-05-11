@@ -31,13 +31,20 @@ inf2022001@ionio.gr
 
 **Project Title**
 
+**Team Members**
+
 **Description**
 
 **Motivation**
 
 **The reason why we build this program**
 
-**What problems out problem solve**
+**What problems our problem solve**
 
-****
+**Our Experience and What did we learn**
+
+
+
+
+
 
