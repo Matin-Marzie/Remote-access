@@ -1,7 +1,4 @@
 ## **Installation**
-## **Bigger and Bold**
-
-
 
 **Requirements**
 The only requirement for this program is to have Python installed on your machine. If you don't have Python installed yet, you can download it from the official website https://www.python.org/downloads/
