@@ -35,7 +35,11 @@ Remote-Access
 
 Mohammad Matin Marzie &emsp; Ισμήνη Γαλανού &emsp;&emsp;&emsp;&emsp; Θωμάς Νάκος &emsp;&emsp;&emsp;&emsp;&emsp; Δανιήλ Αρίσταρχος Παυλίδης<br>
 inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr<br>
-university professors
+**university professors**
+
+-Ioannis Karydis<br>
+-Alexandros Panaretos<br>
+-Despoina Mouratidi<br>
 
 
 **Description**<br>
