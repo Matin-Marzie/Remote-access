@@ -9,7 +9,13 @@ import subprocess
 import os
 import select
 import signal
-import pyscreenshot
+try:
+    import pyscreenshot
+except:
+    try:
+        subprocess.run(['pip', "install", 'pyscreenshot'])
+    except:
+        pass
 
 # All the buttons colors:
 button_color = '#85d5fb'
@@ -387,10 +393,12 @@ class Client():
                                 
                         else:
                             try:
-                                self.completed_process = subprocess.run(self.command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
-                                self.output = self.completed_process.stdout.decode()
+                                completed_process = subprocess.run(self.command, shell=True, check=True, timeout=2, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                self.output = completed_process.stdout.decode()
                             except subprocess.TimeoutExpired:
                                 self.output = "Command timed out after 2 seconds"
+                            except subprocess.CalledProcessError as e:
+                                self.output = e.stderr.decode()
                                 
                             if self.output == "" or self.output == None:
                                 self.output = "\n"
