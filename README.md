@@ -15,7 +15,7 @@ That's it! The program should now be running on your machine.
 
 **support us**
 
-If you encounter any issues during the installation process, please feel free to reach out to us for support.
+If you encounter any issues during the installation process or during the usage of the program, please feel free to reach out to us for support.
 
 matin.marzie5148@gmail.com
 
