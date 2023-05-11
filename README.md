@@ -45,10 +45,26 @@ Remote-Access
 providing access to another computer over a private network(Home Network)!
 
 **Motivation**<br>
-
+we really like Networks, Cybersecurity
+	it was university project
 **The reason why we build this program**<br>
+it has fun
+	That people can:
+		help each other from distance
+		share data
+		communicate
+**The difference compared to other programs**
+supports the Greek Language
+	open source and we don't sell your data(just kidding)
 
 **What problems our problem solve**<br>
+
+**What did we learn**
+Network, cybersecurity
+	programming logic
+	python programming laguage
+	teamwork
+	soft skills (social interactions in workd
 
 **Our Experience and What did we learn**<br>
 
