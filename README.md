@@ -24,6 +24,11 @@ inf2022001@ionio.gr
 
 
 
+
+
+
+
+
 ## **About Our Project**
 
 ![image](https://github.com/Matin-Marzie/Remote-access/assets/116279956/f2883163-10d5-4d96-aa8a-a33045fdb67e)
@@ -44,28 +49,3 @@ inf2022001@ionio.gr
 **Our Experience and What did we learn**
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-.
