@@ -34,19 +34,27 @@ Remote-Access
 **Team Members**
 
 Mohammad Matin Marzie &emsp; Ισμήνη Γαλανού &emsp;&emsp;&emsp;&emsp; Θωμάς Νάκος &emsp;&emsp;&emsp;&emsp;&emsp; Δανιήλ Αρίσταρχος Παυλίδης<br>
-inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
+inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr<br>
+university professors
 
 
 
 
-**Description**
+**Description**<br>
+providing access to another computer over a private network(Home Network)!
 
-**Motivation**
+**Motivation**<br>
 
-**The reason why we build this program**
+**The reason why we build this program**<br>
 
-**What problems our problem solve**
+**What problems our problem solve**<br>
 
-**Our Experience and What did we learn**
+**Our Experience and What did we learn**<br>
+
+**What technologies we used and why**
+
+**Problems we Faced**
+
+**Features we hope to implement in the future**
 
 
