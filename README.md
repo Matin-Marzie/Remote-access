@@ -27,12 +27,10 @@ inf2022001@ionio.gr
 ![image](https://github.com/Matin-Marzie/Remote-access/assets/116279956/f2883163-10d5-4d96-aa8a-a33045fdb67e)
 
 
-**Project Title**
-
+**Project Title**<br>
 Remote-Access
 
-**Team Members**
-
+**Team Members**<br>
 &emsp;Mohammad Matin Marzie &emsp; Ισμήνη Γαλανού &emsp;&emsp;&emsp;&emsp; Θωμάς Νάκος &emsp;&emsp;&emsp;&emsp;&emsp; Δανιήλ Αρίσταρχος Παυλίδης<br>
 &emsp;inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
 
@@ -40,31 +38,28 @@ Remote-Access
 &emsp;-Ioannis Karydis
 
 
-**Description**
-
+**Description**<br>
 providing access to another computer over a private network(Home Network)!
 
-**Motivation**
-
+**Motivation**<br>
 we really like Networks, Cybersecurity
 	it was university project
 	
-**The reason why we build this program**
-
+**The reason why we build this program**<br>
 it has fun
 	That people can:
 		help each other from distance
 		share data
 		communicate
 		
-**The difference compared to other programs**
+**The difference compared to other programs**<br>
 supports the Greek Language
 	open source and we don't sell your data(just kidding)
 	
 
 **What problems our problem solve**<br>
 
-**What did we learn**
+**What did we learn**<br>
 Network, cybersecurity
 	programming logic
 	python programming laguage
@@ -74,10 +69,10 @@ Network, cybersecurity
 
 **Our Experience and What did we learn**<br>
 
-**What technologies we used and why**
+**What technologies we used and why**<br>
 
-**Problems we Faced**
+**Problems we Faced**<br>
 
-**Features we hope to implement in the future**
+**Features we hope to implement in the future**<br>
 
 
