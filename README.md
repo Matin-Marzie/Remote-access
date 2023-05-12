@@ -43,35 +43,33 @@ providing access to another computer over a private network(Home Network)!
 
 **Motivation**<br>
 we really like Networks, Cybersecurity
-	it was university project
+it was university project
 	
 **The reason why we build this program**<br>
 it has fun
-	That people can:
-		help each other from distance
-		share data
-		communicate
+That people can: help each other from distance, share data, communicate
 		
 **The difference compared to other programs**<br>
 supports the Greek Language
-	open source and we don't sell your data(just kidding)
-	
+open source and we don't sell your data(just kidding)
 
-**What problems our problem solve**<br>
+**What problems our program solve**<br>
+
 
 **What did we learn**<br>
 Network, cybersecurity
-	programming logic
-	python programming laguage
-	teamwork
-	soft skills (social interactions in workd
-	
+programming logic
+python programming laguage
+teamwork
+soft skills (social interactions in work)
 
-**Our Experience and What did we learn**<br>
 
 **What technologies we used and why**<br>
+we used only python build in libraries except of the 'pyscreenshot' library
 
 **Problems we Faced**<br>
+lot of socket errors
+stopping threads
 
 **Features we hope to implement in the future**<br>
 **Bibliography**<br>
