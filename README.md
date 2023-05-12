@@ -80,6 +80,7 @@ Network, cybersecurity
 
 **Power point παρουσίασης**<br>
 θα το ανεβάσουμε σύντομα
+<br><br>
 **ChatGPT**<br>
 &emsp;Here are a few polite ways to say "thanks for reading until the end of the text":<br>
 
