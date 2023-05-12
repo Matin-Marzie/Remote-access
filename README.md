@@ -53,9 +53,6 @@ That people can: help each other from distance, share data, communicate<br>
 supports the Greek Language<br>
 open source and we don't sell your data(just kidding)<br>
 
-**What problems our program solve**<br>
-
-
 **What did we learn**<br>
 Network, cybersecurity<br>
 programming logic<br>
@@ -72,12 +69,19 @@ lot of socket errors<br>
 stopping threads<br>
 
 **Features we hope to implement in the future**<br>
+Voice chat<br>
+more error checkings<br>
+
 **Bibliography**<br>
+youtube Videos<br>
+we asked chatGPT to show the manual of each library!<br>
+
 **Video**<br>
-θα ανεβάσουμε το βίντεο σήμερα το βράδυ μεταξύ 9:30 μέ 10:00<br>
+θα ανεβάσουμε το βίντεο σήμερα το βράδυ μεταξύ 10:30 μέ 11:00<br>
 
 **Power point παρουσίασης**<br>
 θα το ανεβάσουμε σύντομα<br>
+
 <br><br>
 **ChatGPT**<br>
 &emsp;Here are a few polite ways to say "thanks for reading until the end of the text":<br>
