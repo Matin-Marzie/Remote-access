@@ -37,18 +37,20 @@ Remote-Access
 &emsp;inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
 
 **university professors**
-
 &emsp;-Ioannis Karydis<br>
 
 
-**Description**<br>
+**Description**
+
 providing access to another computer over a private network(Home Network)!
 
-**Motivation**<br>
+**Motivation**
+
 we really like Networks, Cybersecurity
 	it was university project
 	
-**The reason why we build this program**<br>
+**The reason why we build this program**
+
 it has fun
 	That people can:
 		help each other from distance
