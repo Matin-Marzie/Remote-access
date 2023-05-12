@@ -201,7 +201,7 @@ class Server():
                     elif self.output == "showfile--*#($)&":
                         self.client.sendall(b'ok')
                         data = self.client.recv(1024).decode()
-                        if data != b'not ok':
+                        if data != "not ok":
                             self.file_name, self.file_size = data.split('|')
                             self.file_size = int(self.file_size)
                             self.client.sendall(b'ok')
@@ -216,8 +216,7 @@ class Server():
                                 self.client.sendall(b'ok')
                             subprocess.run(['xdg-open', f"recv-{self.file_name}"])
                         else:
-                            e = self.client.recv(1024).decode()
-                            run_login.run_server.output_list.insert(tk.END, e)
+                            run_login.run_server.output_list.insert(tk.END, "ERROR")
                             run_login.run_server.output_list.yview(tk.END)
 
 
@@ -386,31 +385,36 @@ class Client():
                                 pass
 
                         elif self.command[0:8] == "showfile":
-                            self.client_socket.send("showfile--*#($)&".encode())
-                            self.client_socket.recv(1024)
-
-                            self.file_name = self.command[9:]
-                            try:      
+                            try:
+                                self.file_name = self.command[9:]
                                 self.file_size = os.path.getsize(self.file_name)
-                                
-                                self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
-                                self.msg = self.client_socket.recv(1024)
-                                if self.msg == b'ok':
-                                    try:
-                                        file = open(self.file_name, 'rb')
-                                        data = file.read()
-                                    except:
-                                        self.client_socket.send("could not open the file!".encode())
-                                    try:
-                                        self.client_socket.sendall(data)
-                                        self.client_socket.recv(1024)
-                                    except:
-                                        self.client_socket.send("could not send data!".encode())
-                                else:
-                                    pass
-                            except Exception as e:
-                                self.client_socket.sendall(b'not ok')
-                                self.client_socket.send(e.encode())
+                                send_file = True
+                            except:
+                                send_file = False
+                                self.client_socket.send("not ok".encode())
+
+                            if send_file:
+                                self.client_socket.send("showfile--*#($)&".encode())
+                                self.client_socket.recv(1024)
+
+                                try:      
+                                    self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
+                                    self.msg = self.client_socket.recv(1024)
+                                    if self.msg == b'ok':
+                                        try:
+                                            file = open(self.file_name, 'rb')
+                                            data = file.read()
+                                        except:
+                                            self.client_socket.send("could not open the file!".encode())
+                                        try:
+                                            self.client_socket.sendall(data)
+                                            self.client_socket.recv(1024)
+                                        except:
+                                            self.client_socket.send("could not send data!".encode())
+                                    else:
+                                        pass
+                                except Exception as e:
+                                    print(e)
                                 
 
                                 
