@@ -74,5 +74,13 @@ Network, cybersecurity
 **Problems we Faced**<br>
 
 **Features we hope to implement in the future**<br>
+**Bibliography**<br>
+**ChatGPT**
+&emsp;Here are a few polite ways to say "thanks for reading until the end of the text":
 
+&emsp;1. Thank you for taking the time to read through the entire text.
+&emsp;2. Your attention to detail and willingness to read until the end is greatly appreciated.
+&emsp;3. I appreciate your dedication in reading the entire text.
+&emsp;4. Thank you for your thoroughness in reading until the end of the text.
+&emsp;5. Your commitment to reading until the end is commendable, thank you.
 
