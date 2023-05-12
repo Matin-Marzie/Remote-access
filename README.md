@@ -35,49 +35,49 @@ Remote-Access
 &emsp;inf2022001@ionio.gr &emsp;&emsp;&emsp;   inf2022029@ionio.gr &emsp;&emsp; inf2022141@ionio.gr &emsp;&emsp; inf2022161@iono.gr
 
 **university professors**<br>
-&emsp;-Ioannis Karydis
+&emsp;-Ioannis Karydis<br>
 
 
 **Description**<br>
-providing access to another computer over a private network(Home Network)!
+providing access to another computer over a private network(Home Network)!<br>
 
 **Motivation**<br>
-we really like Networks, Cybersecurity
-it was university project
+we really like Networks, Cybersecurity<br>
+it was university project<br>
 	
 **The reason why we build this program**<br>
-it has fun
-That people can: help each other from distance, share data, communicate
+it has fun<br>
+That people can: help each other from distance, share data, communicate<br>
 		
 **The difference compared to other programs**<br>
-supports the Greek Language
-open source and we don't sell your data(just kidding)
+supports the Greek Language<br>
+open source and we don't sell your data(just kidding)<br>
 
 **What problems our program solve**<br>
 
 
 **What did we learn**<br>
-Network, cybersecurity
-programming logic
-python programming laguage
-teamwork
-soft skills (social interactions in work)
+Network, cybersecurity<br>
+programming logic<br>
+python programming laguage<br>
+teamwork<br>
+soft skills (social interactions in work)<br>
 
 
 **What technologies we used and why**<br>
-we used only python build in libraries except of the 'pyscreenshot' library
+we used only python build in libraries except of the 'pyscreenshot' library<br>
 
 **Problems we Faced**<br>
-lot of socket errors
-stopping threads
+lot of socket errors<br>
+stopping threads<br>
 
 **Features we hope to implement in the future**<br>
 **Bibliography**<br>
 **Video**<br>
-θα ανεβάσουμε το βίντεο σήμερα το βράδυ μεταξύ 9:30 μέ 10:00
+θα ανεβάσουμε το βίντεο σήμερα το βράδυ μεταξύ 9:30 μέ 10:00<br>
 
 **Power point παρουσίασης**<br>
-θα το ανεβάσουμε σύντομα
+θα το ανεβάσουμε σύντομα<br>
 <br><br>
 **ChatGPT**<br>
 &emsp;Here are a few polite ways to say "thanks for reading until the end of the text":<br>
