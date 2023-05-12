@@ -176,19 +176,24 @@ class Server():
                     if self.output == "screenshot--*#($)&":
                         self.client.sendall(b'ok')
                         data = self.client.recv(1024).decode()
-                        self.file_name, self.file_size = data.split('|')
-                        self.file_size = int(self.file_size)
-                        self.client.sendall(b'ok')
-
-                        with open("victim-screenshot.png", 'wb') as file:
-                            while self.file_size > 0:
-                                data = self.client.recv(min(self.file_size, 4096))
-                                file.write(data)
-                                self.file_size -= len(data)
-                                if not data:
-                                    break
+                        try:
+                            self.file_name, self.file_size = data.split('|')
+                            self.file_size = int(self.file_size)
                             self.client.sendall(b'ok')
-                        subprocess.run(['xdg-open', 'victim-screenshot.png'])
+
+                            with open("victim-screenshot.png", 'wb') as file:
+                                while self.file_size > 0:
+                                    data = self.client.recv(min(self.file_size, 4096))
+                                    file.write(data)
+                                    self.file_size -= len(data)
+                                    if not data:
+                                        break
+                                self.client.sendall(b'ok')
+                            subprocess.run(['xdg-open', 'victim-screenshot.png'])
+                        except:
+                            run_login.run_server.output_list.insert(tk.END, "can't screenshot")
+                        if data == "not ok":
+                            run_login.run_server.output_list.insert(tk.END, "can't screenshot")
 
                     elif self.output == "showfile--*#($)&":
                         self.client.sendall(b'ok')
@@ -343,13 +348,17 @@ class Client():
                             try:
                                 self.client_socket.send("screenshot--*#($)&".encode())
                                 self.client_socket.recv(1024)
-                                self.screenshot = pyscreenshot.grab()
-                                self.file_name = "screenshot--*#($)&.png"
-                                self.screenshot.save(self.file_name)
+                                try:
+                                    self.file_name = "screenshot--*#($)&.png"
+                                    self.screenshot = pyscreenshot.grab()
+                                    self.screenshot.save(self.file_name)
 
-                                self.file_size = os.path.getsize(self.file_name)
-                                self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
-                                self.msg = self.client_socket.recv(1024)
+                                    self.file_size = os.path.getsize(self.file_name)
+                                
+                                    self.client_socket.send(f"{self.file_name}|{self.file_size}".encode())
+                                    self.msg = self.client_socket.recv(1024)
+                                except:
+                                    self.msg = "not ok"
                                 if self.msg == b'ok':
                                     try:
                                         file = open(self.file_name, 'rb')
@@ -362,10 +371,10 @@ class Client():
                                     except:
                                         self.client_socket.send("could not send data!".encode())
                                 else:
-                                    raise Exception('client did not recieved file name and size')
+                                    self.client_socket.send(self.msg.encode())
 
                             except:
-                                self.client_socket.send("couldn't take screenshot".encode())
+                                pass
 
                         elif self.command[0:8] == "showfile":
                             self.client_socket.send("showfile--*#($)&".encode())
@@ -780,13 +789,72 @@ class Server_frame():
     # ----------Help page----------
     def help_page(self):
         self.indicate(self.help_btn)
-        page_frame = tk.Frame(self.main_frame)
+        self.help_page_frame = tk.Frame(self.main_frame)
 
-        page_frame.place(x=0, y=0)
-        page_frame.pack_propagate(False)
-        page_frame.configure(width=960, height=880)
+        self.help_page_frame.place(x=0, y=0)
+        self.help_page_frame.pack_propagate(False)
+        self.help_page_frame.configure(width=960, height=880)
         
-        # θα γράψουμε μετά
+        self.help_list = tk.Listbox(self.help_page_frame,
+                                    font=(font_name, 20),
+                                    fg='black',
+                                    bg='#d9d9d9'
+                                    )
+        self.help_scrollbar = tk.Scrollbar(self.help_page_frame)
+
+        self.help_scrollbar.pack(side=tk.RIGHT, fill='y')
+        self.help_list.pack(side='left', expand=True, fill='both')
+
+        self.help_list.config(yscrollcommand=self.help_scrollbar.set)
+        self.help_scrollbar.config(command=self.help_list.yview)
+
+        self.help = """                                                      Manual
+PROGRAM USAGE
+    -Back
+        If you want to change user, you can press the 'Back' button from 
+        the left bar.
+
+    -Connection:
+        If you have Internet connection, your ip address must be emerged
+        in the 'IP Addr' entry.
+        For instance it can be '192.168.0.1'.
+        Otherwise your local ip address will be showed which is '127.0.0.1'
+        You have to also specify a port or you can use a default port whcih
+        is '8119'.
+        To start listening, you can press the 'START' button.
+        After the client connects to to the server(you), the background
+        will be green and you will automaticlly be directed  to the 
+        'Command Line'.
+
+    -Command Line
+        You can type you command and press send.
+        You can send any 'windows command line' (cmd) commands to use the
+        program.
+        For instance, you can send "dir" command to see the content of the
+        directory you are.
+        Furthermore we have also comtumized more command:
+            -screenshot
+                This command will take an screenshot of the client's window
+                and also save it in the server's computer, in the directory of
+                the program file.
+            -showfile <file name>
+                This command will show the specified file from the client
+                computer, and also save it in the server's computer, in the
+                directory of the program file.
+            -exit
+                This command will exit the clients from the program.
+    
+    -help
+        To read the Manual you can visit the help page.
+    
+AUTHOR
+    Original Manage by <author's name> <inf2022001@ionio.gr>
+                                                    9 May 2023
+        """
+
+        self.help_lines = self.help.split('\n')
+        for line in self.help_lines:
+            self.help_list.insert(tk.END, line)
 
 
 
@@ -1045,10 +1113,33 @@ class Client_frame():
         self.help_scrollbar.config(command=self.help_list.yview)
 
         self.help = """                           Manual
+PROGRAM USAGE
+    To use the program, you need to
+    connect to a server.
+    In the connect page, you can see
+    'SERVER IP' and 'port'.
+    You have to insert the server's
+    information there, you can ask 
+    the server to get his information.
+    After you insert the server's data
+    and you press the 'START' button,
+    you are trying to connect the server.
+    After the connection the background 
+    will turn to green and the server 
+    can sends commands to your 
+    computer.
 
+    If you want to change user, you can
+    easly press the 'BACK' and choose
+    'server'.
+
+    To read the Manual you can visit the
+    help page.
+    
 AUTHOR
-        Original Manage by <name of the author> <inf2022001@ionio.gr>
-                                        9 May 2023
+    Original Manage by <author's name>
+    <inf2022001@ionio.gr>
+                        9 May 2023
         """
 
         self.help_lines = self.help.split('\n')
