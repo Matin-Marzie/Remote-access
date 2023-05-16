@@ -76,7 +76,7 @@ more error checkings<br>
 youtube Videos<br>
 we asked chatGPT to show the manual of each library!<br>
 
-**Video**<br>
+**Youtube Video**<br>
 https://www.youtube.com/watch?v=aQITg_tdjVg&t=2s<br>
 
 **Power point παρουσίασης**<br>
