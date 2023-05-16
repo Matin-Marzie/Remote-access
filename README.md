@@ -77,7 +77,7 @@ youtube Videos<br>
 we asked chatGPT to show the manual of each library!<br>
 
 **Video**<br>
-θα ανεβάσουμε το βίντεο σήμερα το βράδυ μεταξύ 10:30 μέ 11:00<br>
+https://www.youtube.com/watch?v=aQITg_tdjVg&t=2s<br>
 
 **Power point παρουσίασης**<br>
 θα το ανεβάσουμε σύντομα<br>
