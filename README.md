@@ -77,10 +77,11 @@ youtube Videos<br>
 we asked chatGPT to show the manual of each library!<br>
 
 **Youtube Video**<br>
-https://www.youtube.com/watch?v=aQITg_tdjVg&t=2s<br>
+https://youtu.be/BNSkc8fBKpk<br>
 
 **Power point παρουσίασης**<br>
-θα το ανεβάσουμε σύντομα<br>
+https://github.com/Matin-Marzie/Remote-access/files/11493316/Untitled.presentation.1.pptx<br>
+
 
 <br><br>
 **ChatGPT**<br>
