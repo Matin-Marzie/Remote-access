@@ -9,14 +9,19 @@ import subprocess
 import os
 import select
 import signal
+
+# library to send mails
+import smtplib
+
+
 # All the libraries are build in with python, except the 'pyscreenshot', that is why we try to install it.
-try:
-    import pyscreenshot
-except:
-    try:
-        subprocess.run(['pip', "install", 'pyscreenshot'])
-    except:
-        pass
+# try:
+#     import pyscreenshot
+# except:
+#     try:
+#         subprocess.run(['pip', "install", 'pyscreenshot'])
+#     except:
+#         pass
 
 # All the buttons colors:
 button_color = '#85d5fb'
@@ -74,10 +79,14 @@ class Server():
             self.accept_client_bool = False
         # After the server starts listening successfully:
         if self.accept_client_bool:
+            self.is_server_listening = True
+            run_login.run_server.recv_mail_check_box.config(state='disabled')
             run_login.run_server.listen_btn.config(state='disabled')
             run_login.run_server.print_server_connection_state.config(text='Listening...')
+            # winfo_exists() checks if a widget exists or not, if it has been destroyied [.destroy()] or not
             if run_login.run_server.socket_error.winfo_exists():
                 run_login.run_server.socket_error.destroy()
+            run_login.run_server.recv_mail_check_box.config(state='disabled')
 
         while self.accept_client_bool:
             # Here the server accepts the client for the first time or we are waiting for the client to reconnect
@@ -100,6 +109,18 @@ class Server():
 
                 self.recv_out_put_thread = threading.Thread(target=self.recv_out_put, args=())
                 self.recv_out_put_thread.start()
+
+                # I am checking if the "started_time" has been initialized or if it is exists
+                # We send mail only for the first time when client connects to our server! it is
+                # because it is possible to have internet connection problem and we don't want to 
+                # receive 1000000 mails.
+                if 'started_time' not in locals():
+                    # Checking if user has entered his mail and password
+                    if run_login.run_server.mail != '' and run_login.run_server.mail_password != '':
+                        # Checking if user wants to receive mail when client connected!
+                        if run_login.run_server.recv_mail_check_box_bool.get():
+                            # Sending mail that client connected!
+                            run_login.run_server.send_mail_client_connected()
                 
                 started_time = time()
             else:
@@ -130,10 +151,11 @@ class Server():
                             run_login.run_server.addr_0_label.config(text="")
                             run_login.run_server.addr_1_label.config(text="")
                             run_login.run_server.right_bar_client_label.config(text="Disconnected!")
-
                             break
 
+                    # After 6 seconds that we don't receive any pong:
                     elif(int(time() - started_time)) > 5:
+                        # We close the connection!
                         self.client_ping.close()
                         self.client.close()
                         self.client_ping = None
@@ -142,13 +164,13 @@ class Server():
                         run_login.run_server.addr_0_label.config(text="")
                         run_login.run_server.addr_1_label.config(text="")
                         run_login.run_server.right_bar_client_label.config(text="Disconnected!")
-
                         break
 
-                    # After the 3 seconds, which means that we have not recved and pink, we just change the background color to red
+                    # After 3 seconds, which means that we have not recved any pong, we just change the background color to red
                     elif(int(time() - started_time)) > 2:
                         root.configure(background='red')
                         self.is_server_listening = True
+
 
                     else:
                         pass
@@ -194,7 +216,7 @@ class Server():
                         self.client.close()
                         self.is_client_connected = False
                         break
-                    # in the case of screenshot command we recieve the image of the screenshot of the client
+                    # In case of screenshot command we recieve the image of the screenshot of the client
                     if self.output == "screenshot--*#($)&":
                         self.client.sendall(b'ok')
                         data = self.client.recv(1024).decode()
@@ -490,7 +512,7 @@ class Login_frame():
         
     def show(self):
 
-        x_offset = (screen_windth - WIDTH) // 2
+        x_offset = (screen_width - WIDTH) // 2
         y_offset = (screen_height - HEIGHT) // 2
 
         # i usually use f"" , but just wanted to test the old fashion way!
@@ -567,7 +589,7 @@ class Server_frame():
         window_width = 1600
         window_height = 900
 
-        root.geometry(f"{window_width}x{window_height}+{(screen_windth - window_width)//2}+{(screen_height - window_height)//2}")
+        root.geometry(f"{window_width}x{window_height}+{(screen_width - window_width)//2}+{(screen_height - window_height)//2}")
 
         destroy_old_frames(window)
 
@@ -681,6 +703,7 @@ class Server_frame():
 
     # --------------------middle bar--------------------
     # All the Pages that the user can access pressing the left bar buttons
+    # By running each function(ex. choose_user_page) the content of the page will appear on the middle frame
 
     # ----------Back page----------
     def choose_user_page(self):
@@ -734,6 +757,37 @@ class Server_frame():
                                           font=(font_name, 13),
                                           width=40
                                           )
+        self.mail_label = tk.Label(self.connect_frame,
+                                   font=(font_name, 15),
+                                   text="Mail Address (optional)",
+                                   width=0,
+                                   height=2,
+                                   anchor='s'
+                                   )
+        self.mail_entry = tk.Entry(self.connect_frame,
+                                   font=(font_name, 13),
+                                   width=40
+                                   )
+        self.mail_password_label = tk.Label(self.connect_frame,
+                                   font=(font_name, 15),
+                                   text="Mail Password (optional)",
+                                   width=0,
+                                   height=2,
+                                   anchor='s'
+                                   )
+        self.mail_password_entry = tk.Entry(self.connect_frame,
+                                   font=(font_name, 13),
+                                   width=40
+                                   )
+        self.recv_mail_check_box_bool = tk.BooleanVar()
+        self.recv_mail_check_box = tk.Checkbutton(self.connect_frame,
+                                                  font=(font_name, 13),
+                                                  text='Receive mail when client connected!',
+                                                  pady=20,
+                                                  variable=self.recv_mail_check_box_bool,
+                                                  onvalue=True,
+                                                  offvalue=False,
+                                                  )
         self.listen_btn = tk.Button(self.connect_frame,
                                     bg="#85d5fb",
                                     text='START',
@@ -749,7 +803,6 @@ class Server_frame():
                                         )
         self.error_label = tk.Label(self.connect_frame,
                                     font=(font_name, 15),
-                                    text="We show errors here",
                                     bg='red',
                                     fg='white'
                                     )
@@ -760,18 +813,28 @@ class Server_frame():
                                      fg='white'
                                      )
         
-        # We have written this code because when we change the page to connection page, we can see ip addr, port and the connection state
+        # We have written this code because:
+        # when from other pages, we try to go to connection -by pressing connection button form the left bar-
+        # we want to see connection state and information we have inserted earlier(ex. ip, port, mail, password checkbox)
         if run_login.server.is_server_listening:
             self.server_ip_addr_entry.insert(0, run_login.run_server.server_ip)
             self.server_port_entry.insert(0, run_login.run_server.server_port)
+            self.mail_entry.insert(0, run_login.run_server.mail)
+            self.mail_password_entry.insert(0, run_login.run_server.mail_password)
+            self.recv_mail_check_box.config(state='disabled')
             run_login.run_server.listen_btn.config(state='disabled')
             run_login.run_server.print_server_connection_state.config(text='Listening...')
  
+        # When client is connected and we go to connect page, the content of the page will be:
         elif run_login.server.is_client_connected:
             self.server_ip_addr_entry.insert(0, run_login.run_server.server_ip)
             self.server_port_entry.insert(0, run_login.run_server.server_port)
+            self.mail_entry.insert(0, self.mail)
+            self.mail_password_entry.insert(0, self.mail_password)
+            self.recv_mail_check_box.config(state='disabled')
             run_login.run_server.listen_btn.config(state='disabled')    
             run_login.run_server.print_server_connection_state.config(text='Connected')
+
         else:
             # if it is for the first time we are openning the connection page, our ip address is automaticlly inserted!
             self.server_ip_addr_entry.insert(0, get_private_ip_address())
@@ -781,6 +844,11 @@ class Server_frame():
         self.server_ip_addr_entry.pack()
         self.server_port_label.pack()
         self.server_port_entry.pack()
+        self.mail_label.pack()
+        self.mail_entry.pack()
+        self.mail_password_label.pack()
+        self.mail_password_entry.pack()
+        self.recv_mail_check_box.pack()
         self.listen_btn.pack()
         self.print_server_connection_state.pack()
 
@@ -876,19 +944,36 @@ PROGRAM USAGE
         in the 'IP Addr' entry.
         For instance it can be '192.168.0.1'.
         Otherwise your local ip address will be showed which is '127.0.0.1'
-        You have to also specify a port or you can use a default port whcih
+        You have to also specify a port or you can use a default port which
         is '8119'.
+
+        Note that you need to have two-step verification and you should
+        set App Password to use our email services.
+        Here's how to do it:
+            1. Go to your Google Account settings: 
+                https://myaccount.google.com/
+            2. Click on "Security" in the left sidebar.
+            3. Under the "Signing in to Google" section, find the 
+               "App Passwords" option.
+            4. Click on "App Passwords" and you may be prompted to sign
+               in again.
+        From there, you can generate an App Password specifically for your
+        Python script. You can select "Other (Custom Name)" as the app and
+        give it a unique name, then generate the password. Use this
+        generated App Password in your Python script instead of your 
+        regular Gmail password.
+
         To start listening, you can press the 'START' button.
         After the client connects to to the server(you), the background
         will be green and you will automaticlly be directed  to the 
         'Command Line'.
 
     -Command Line
-        You can type you command and press send.
-        You can send any 'windows command line' (cmd) commands to use the
-        program.
-        For instance, you can send "dir" command to see the content of the
-        directory you are.
+        You can type your command and press send.
+        You can send any 'windows command line' (cmd) commands to
+        use the program.
+        For instance, you can send "dir" command to see the content of
+        the directory you are.
         Furthermore we have also comtumized more command:
             -screenshot
                 This command will take an screenshot of the client's window
@@ -905,8 +990,81 @@ PROGRAM USAGE
         To read the Manual you can visit the help page.
     
 AUTHOR
-    Original Manage by <author's name> <inf2022001@ionio.gr>
+    Original Manage by <Mohammad Matin Marzie>
+    <inf2022001@ionio.gr>
                                                     9 May 2023
+
+
+                                                    Οδηγίες Χρήσης
+
+ΧΡΗΣΗ ΠΡΟΓΡΑΜΜΑΤΟΣ
+     -Back
+         Εάν θέλετε να αλλάξετε χρήστη, μπορείτε να πατήσετε το
+         κουμπί «Back» από στην αριστερή μπάρα.
+
+     -Connect:
+         Εάν έχετε σύνδεση στο Διαδίκτυο, η διεύθυνση IP σας πρέπει να 
+         εμφανιστεί στην καταχώρηση «IP Addr».
+         Για παράδειγμα, μπορεί να είναι «192.168.0.1».
+         Διαφορετικά θα εμφανιστεί η τοπική σας διεύθυνση IP που είναι 
+         "127.0.0.1". Πρέπει επίσης να καθορίσετε μια θύρα ή μπορείτε να 
+         χρησιμοποιήσετε την προεπιλεγμένη θύρα που είναι «8119».
+
+         Σημείωστε ότι πρέπει να έχετε τη διπλή επαλήθευση 
+         (two-step verification) και να έχετε ορίσει Κωδικό Εφαρμογής
+         "App Password" προκειμένου να χρησιμοποιήσετε τις υπηρεσίες
+         email που προσφέρουμε.
+         Παρακάτω αναφέρονται τα βήματα:
+         1. Μεταβείτε στις ρυθμίσεις του λογαριασμού Google σας:
+            https://myaccount.google.com/
+         2. Κάντε κλικ στη "security" στο αριστερό πλαίσιο.
+         3. Στην ενότητα "Signing in to Google", βρείτε την επιλογή
+            "App Passwords".
+         4. Κάντε κλικ στην επιλογή "App Passwords," και ενδέχεται να 
+            σας ζητηθεί να συνδεθείτε ξανά.
+        Από εκεί, μπορείτε να δημιουργήσετε έναν Κωδικό Εφαρμογής 
+        αποκλειστικά για την εφαρμογή μας. Μπορείτε να επιλέξετε 
+        "Άλλο (Προσαρμοσμένο Όνομα)" για την εφαρμογή και να του δώσετε
+        ένα μοναδικό όνομα, εν συνέχεια να δημιουργήσετε τον κωδικό.
+        Χρησιμοποιήστε αυτόν τον δημιουργημένο Κωδικό Εφαρμογής στην
+        εφαρμογή Python αντί να χρησιμοποιήσετε τον κανονικό κωδικό 
+        πρόσβασης του Gmail σας.
+
+         Για να αρχίζετε να αποδέχεται πελάτες, μπορείτε να πατήσετε
+         το κουμπί 'START'. Αφού συνδεθεί ο πελάτης στον 
+         διακομιστή(εσείς), το φόντο θα είναι πράσινο και αυτόματα θα
+         κατευθυνθείτε στο 'Command Line'.
+
+     -Command Line
+         Μπορείτε να πληκτρολογήσετε την εντολή σας και να πατήσετε 
+         αποστολή. Μπορείτε να στείλετε οποιεσδήποτε εντολές "γραμμή 
+         εντολών των Windows" (cmd) για να χρησιμοποιήσετε το 
+         πρόγραμμα.
+         Για παράδειγμα, μπορείτε να στείλετε την εντολή "dir" για 
+         να δείτε το περιεχόμενο του κατάλογου που είστε.
+         Επιπλέον, έχουμε επίσης ρυθμίσει περισσότερες εντολές:
+             - screenshot
+                 Αυτή η εντολή θα τραβήξει ένα στιγμιότυπο οθόνης 
+                 του παραθύρου του πελάτη και επίσης να το 
+                 αποθηκεύσετε στον υπολογιστή του διακομιστή, 
+                 στον κατάλογο στον οποίο βρίσκεται το πρόγραμμά 
+                 σας.
+             -showfile <όνομα αρχείου>
+                 Αυτή η εντολή θα εμφανίσει το καθορισμένο αρχείο 
+                 από τον υπολογιστή του πελάτη και αποθηκεύστε τον 
+                 στον υπολογιστή του διακομιστή, στο κατάλογο του 
+                 αρχείου του προγράμματος.
+             -exit
+                 Αυτή η εντολή θα αποσύρει τους πελάτες από το 
+                 πρόγραμμα.
+    
+     -help
+         Για να διαβάσετε το Εγχειρίδιο, μπορείτε να επισκεφτείτε 
+         τη σελίδα βοήθειας.
+    
+ΣΥΓΓΡΑΦΕΑΣ
+     Μετάφραση από <Θωμάς Νάκος> <inf2022001@ionio.gr>
+                                                     9 Μαΐου 2023
         """
 
         self.help_lines = self.help.split('\n')
@@ -915,7 +1073,7 @@ AUTHOR
 
 
 
-    # --------------------object functions--------------------
+    # --------------------object-functions--------------------
 
     # Each time we change the pages, pressing any button on option(left) bar:
     # 1) We destroy old pages(frames) on the main frame
@@ -941,20 +1099,49 @@ AUTHOR
     def listen_btn_click(self):
         self.server_ip = self.server_ip_addr_entry.get()
         self.server_port = self.server_port_entry.get()
+        self.mail = self.mail_entry.get()
+        self.mail_password = self.mail_password_entry.get()
 
 
+    # If the user submitting again, We clear the old existed errors and check for validation again
+        run_login.run_server.error_label.config(text='')
+        # pack_forget() method just disappears the label and it does'nt destroys it, so we can pack it later!
+        run_login.run_server.socket_error.pack_forget()
+
+        # Checking for entries validation
         if not is_valid_ip_address(self.server_ip):
-            run_login.run_server.error_label.config(text='Invalid ip address!\nRTFM')
-            run_login.run_server.error_label.pack()
-        elif not is_valid_port(self.server_port):
-            run_login.run_server.error_label.config(text='Invalid port!\nRTFM')
-            run_login.run_server.error_label.pack()
+            add_line_tkinter_label(run_login.run_server.error_label, '* Invalid ip address!')
+
+        if not is_valid_port(self.server_port):
+            add_line_tkinter_label(run_login.run_server.error_label, '* Invalid port!')
+
+        if self.mail != "" and self.mail_password != "":
+            if not is_valid_email_password(self.mail, self.mail_password):
+                add_line_tkinter_label(run_login.run_server.error_label, '* invalid mail or wrong password\n-- Note that you need to have two-step verification and\nyou should set App Password\nFor details visit the help page from the left bar!')
+        elif self.mail != "" and self.mail_password =="":
+            add_line_tkinter_label(run_login.run_server.error_label, '* You also have to fill the "Mail Password" box')
+        elif self.mail == "" and self.mail_password !="":
+            add_line_tkinter_label(run_login.run_server.error_label, '* You also have to fill the "Mail Address" box')            
         else:
-            run_login.run_server.error_label.destroy()
+            pass
+        
+        # With this if statement we check if we have any errors, if not we start the server and pinging
+        if  run_login.run_server.error_label.cget('text') == "":
+            run_login.run_server.error_label.pack_forget()
             self.listening_thread = threading.Thread(target=run_login.server.capture_ping, args=(self.server_ip, self.server_port))
             self.listening_thread.start()
 
 
+    def send_mail_client_connected(self):
+        try:
+            smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+            smtp_server.starttls()
+            smtp_server.login(self.mail, self.mail_password)
+            smtp_server.sendmail(self.mail, self.mail, "Client Connected!")
+        except Exception as e:
+            print(str(e))
+        finally:
+            smtp_server.quit()
 
 
 # ____________________client-window____________________
@@ -962,7 +1149,7 @@ AUTHOR
 class Client_frame():
     def __init__(self, window):
 
-        x_offset = (screen_windth - WIDTH) // 2
+        x_offset = (screen_width - WIDTH) // 2
         y_offset = (screen_height - HEIGHT) // 2
 
         root.geometry("{}x{}+{}+{}".format(WIDTH, HEIGHT, x_offset, y_offset))
@@ -1192,16 +1379,55 @@ PROGRAM USAGE
     help page.
     
 AUTHOR
-    Original Manage by <author's name>
+    Original Manage by <Mohammad
+    Matin Marzie>
     <inf2022001@ionio.gr>
+    
                         9 May 2023
+
+
+
+                        Οδηγίες Χρήσης
+
+Χρήση Προγράματος
+
+        Για να χρησιμοποιήσετε το 
+        πρόγραμμα, πρέπει να συνδεθείτε 
+        σε διακομιστή. Στη σελίδα 
+        "connect", μπορείτε να δείτε 
+        'SERVER IP' και 'port'. Πρέπει 
+        να εισαγάγετε της πληροφορίες 
+        του διακομιστή εκεί, μπορείτε 
+        να ρωτήσετε τον διακομιστής για 
+        να πάρει τις πληροφορίες του. 
+        Αφού εισαγάγετε τα δεδομένα του 
+        διακομιστή και πατήστε το κουμπί
+        'START', προσπαθείτε να συνδέσετε 
+        τον διακομιστή. Μετά τη σύνδεση 
+        το φόντο θα γίνει πράσινο και ο 
+        διακομιστής μπορεί να στέλνει 
+        εντολέςστο δικό σας υπολογιστή. 
+        Εάν θέλετε να αλλάξετε χρήστη, 
+        μπορείτε Πατήστε εύκολα το '
+        BACK' και επιλέξτε 'client'. 
+        Για να διαβάσετε το Εγχειρίδιο 
+        μπορείτε να επισκεφτείτε τη
+        σελίδα 'help'.
+
+ΣΥΓΓΡΑΦΕΑΣ 
+
+        Μετάφραση απο
+        <θωμάς Νάκος> 
+        <inf2022141@ionio.gr> 
+
+                        9 Μαΐου 2023
         """
 
         self.help_lines = self.help.split('\n')
         for line in self.help_lines:
             self.help_list.insert(tk.END, line)
 
-# ____________________Functions____________________
+# ____________________GENERAL_Functions____________________
 
 # Each time we change pages, we destroy the old page(frames), and append the conntend to the new page(frame)
 def destroy_old_frames(frame):
@@ -1289,19 +1515,52 @@ def x():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         exit_program()
 
+
+# This function adds a new TextLine to a tkinter label
+def add_line_tkinter_label(tkinter_label, new_line):
+    if tkinter_label.winfo_exists():
+        # getting the current text of the label
+        current_text = tkinter_label.cget("text") 
+        new_text = f"{current_text}\n{new_line}"
+        tkinter_label.config(text=new_text)
+        tkinter_label.pack()
+    else:
+        tkinter_label.config(text=new_line)
+        tkinter_label.pack()
+
+
+# This function checks if an email with it's password is correct
+def is_valid_email_password(email, password):
+    try:
+        # Creating smtp server
+        smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+        # Enabling encryption (it is recommended)
+        smtp_server.starttls()
+        # Login with provided email passwords
+        smtp_server.login(email, password)
+        # if login is successesful, we return True
+        return True
+    except smtplib.SMTPAuthenticationError:
+        # If login fails return False
+        return False
+    finally:
+        smtp_server.quit()
+
+
 #__________________________________________________
 
 
 # Creating a window
 root = tk.Tk()
 
-screen_windth = root.winfo_screenwidth()
+# This method returns as the screen width of the user's window size
+screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
 
 WIDTH = 800
 HEIGHT = 600
 
-x_offset = (screen_windth - WIDTH) // 2
+x_offset = (screen_width - WIDTH) // 2
 y_offset = (screen_height - HEIGHT) // 2
 
 root.geometry("{}x{}+{}+{}".format(WIDTH, HEIGHT, x_offset, y_offset))
@@ -1314,6 +1573,5 @@ root.protocol("WM_DELETE_WINDOW", x)
 # Runnig program 
 run_login = Login_frame(root)
 run_login.show()
-
 
 root.mainloop()
